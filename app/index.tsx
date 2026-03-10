@@ -332,6 +332,12 @@ export default function HomeScreen() {
       <View style={styles.container}>
         {/* ヘッダー */}
         <View style={styles.header}>
+          <Pressable
+            onPress={() => router.push('/settings')}
+            style={styles.settingsBtn}
+          >
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </Pressable>
           <Text style={styles.appTitle}>⚡ フリスケ</Text>
           <View style={styles.headerRight}>
             {/* 未同期タスク数バッジ */}
@@ -344,12 +350,6 @@ export default function HomeScreen() {
                 </Text>
               </Pressable>
             )}
-            <Pressable
-              onPress={() => router.push('/settings')}
-              style={styles.settingsBtn}
-            >
-              <Text style={styles.settingsIcon}>⚙️</Text>
-            </Pressable>
           </View>
         </View>
 
@@ -487,10 +487,11 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
   settingsBtn: {
-    padding: 4,
+    padding: 8,
+    marginRight: 4,
   },
   settingsIcon: {
-    fontSize: 22,
+    fontSize: 24,
   },
   timelineWrapper: {
     flex: 1,
