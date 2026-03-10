@@ -41,9 +41,11 @@ export function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, 
       runOnJS(onLongPress)(task);
     });
 
-  // ドラッグジェスチャー
+  // ドラッグジェスチャー（横スクロールと干渉しないように設定）
   const panGesture = Gesture.Pan()
     .activateAfterLongPress(200)
+    .activeOffsetY([-10, 10])
+    .failOffsetX([-20, 20])
     .onStart(() => {
       isDragging.value = true;
       scale.value = withSpring(1.15, { damping: 10, stiffness: 200 });
