@@ -38,6 +38,8 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
   const [customMode, setCustomMode] = useState(false);
   const [customHours, setCustomHours] = useState('');
   const [customMinutes, setCustomMinutes] = useState('');
+  const [startHour, setStartHour] = useState(-1);
+  const [startMinute, setStartMinute] = useState(0);
 
   useEffect(() => {
     if (task) {
@@ -46,6 +48,15 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
       setColor(task.color);
       setIcon(task.icon);
       setDefaultStartTime(task.defaultStartTime || '');
+      // デフォルト開始時刻をパース
+      if (task.defaultStartTime) {
+        const [h, m] = task.defaultStartTime.split(':').map(Number);
+        setStartHour(isNaN(h) ? -1 : h);
+        setStartMinute(isNaN(m) ? 0 : m);
+      } else {
+        setStartHour(-1);
+        setStartMinute(0);
+      }
       // プリセットにない時間ならカスタムモードで表示
       const isPreset = DURATION_OPTIONS.includes(task.duration as any);
       setCustomMode(!isPreset);
@@ -62,6 +73,8 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
       setColor(STICKY_COLORS[Math.floor(Math.random() * STICKY_COLORS.length)]);
       setIcon('💼');
       setDefaultStartTime('');
+      setStartHour(-1);
+      setStartMinute(0);
       setCustomMode(false);
       setCustomHours('');
       setCustomMinutes('');
@@ -243,15 +256,81 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
 
             {/* デフォルト開始時刻 */}
             <Text style={styles.sectionLabel}>デフォルト開始時刻（任意）</Text>
-            <TextInput
-              style={styles.input}
-              value={defaultStartTime}
-              onChangeText={setDefaultStartTime}
-              placeholder="例: 09:00"
-              placeholderTextColor={COLORS.textMuted}
-              keyboardType="numbers-and-punctuation"
-              maxLength={5}
-            />
+            <View style={styles.timePickerContainer}>
+              {/* 設定なしボタン */}
+              <Pressable
+                onPress={() => { setDefaultStartTime(''); setStartHour(-1); setStartMinute(0); }}
+                style={[
+                  styles.timeNoneBtn,
+                  startHour === -1 && styles.timeNoneBtnActive,
+                ]}
+              >
+                <Text style={[
+                  styles.timeNoneText,
+                  startHour === -1 && styles.timeNoneTextActive,
+                ]}>設定なし</Text>
+              </Pressable>
+
+              {startHour >= 0 && (
+                <View style={styles.timeDisplay}>
+                  <Text style={styles.timeDisplayText}>
+                    {String(startHour).padStart(2, '0')}:{String(startMinute).padStart(2, '0')}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* 時間選択 */}
+            <Text style={styles.timeSubLabel}>時</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.timeRow}>
+                {Array.from({ length: 24 }, (_, i) => (
+                  <Pressable
+                    key={i}
+                    onPress={() => {
+                      setStartHour(i);
+                      const min = startMinute >= 0 ? startMinute : 0;
+                      setDefaultStartTime(`${String(i).padStart(2, '0')}:${String(min).padStart(2, '0')}`);
+                    }}
+                    style={[
+                      styles.timeChip,
+                      startHour === i && styles.timeChipActive,
+                    ]}
+                  >
+                    <Text style={[
+                      styles.timeChipText,
+                      startHour === i && styles.timeChipTextActive,
+                    ]}>{i}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+
+            {/* 分選択 */}
+            <Text style={styles.timeSubLabel}>分</Text>
+            <View style={styles.timeRow}>
+              {[0, 15, 30, 45].map(m => (
+                <Pressable
+                  key={m}
+                  onPress={() => {
+                    setStartMinute(m);
+                    const h = startHour >= 0 ? startHour : 9;
+                    if (startHour < 0) setStartHour(h);
+                    setDefaultStartTime(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+                  }}
+                  style={[
+                    styles.timeChip,
+                    styles.timeChipWide,
+                    startMinute === m && startHour >= 0 && styles.timeChipActive,
+                  ]}
+                >
+                  <Text style={[
+                    styles.timeChipText,
+                    startMinute === m && startHour >= 0 && styles.timeChipTextActive,
+                  ]}>{String(m).padStart(2, '0')}</Text>
+                </Pressable>
+              ))}
+            </View>
           </ScrollView>
 
           {/* ボタン */}
@@ -469,6 +548,89 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '700',
     marginLeft: 4,
+  },
+  timePickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  timeNoneBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  timeNoneBtnActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  timeNoneText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  timeNoneTextActive: {
+    color: COLORS.background,
+    fontWeight: '800',
+  },
+  timeDisplay: {
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '50',
+  },
+  timeDisplayText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.primary,
+    letterSpacing: 2,
+  },
+  timeSubLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingBottom: 4,
+  },
+  timeChip: {
+    width: 38,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  timeChipWide: {
+    width: 52,
+  },
+  timeChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  timeChipText: {
+    fontSize: 14,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  timeChipTextActive: {
+    color: COLORS.background,
+    fontWeight: '800',
   },
   colorRow: {
     flexDirection: 'row',
