@@ -136,7 +136,7 @@ export default function SettingsScreen() {
         {/* アプリ情報 */}
         <Text style={styles.sectionTitle}>ℹ️ アプリ情報</Text>
         <View style={styles.infoCard}>
-          <Text style={styles.infoText}>FlickSched v1.0.0</Text>
+          <Text style={styles.infoText}>フリスケ v1.0.0</Text>
           <Text style={styles.infoSubtext}>
             予定を立てるのがめんどくさい人のための{'\n'}
             ワンタップスケジューリングアプリ

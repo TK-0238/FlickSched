@@ -332,7 +332,7 @@ export default function HomeScreen() {
       <View style={styles.container}>
         {/* ヘッダー */}
         <View style={styles.header}>
-          <Text style={styles.appTitle}>⚡ FlickSched</Text>
+          <Text style={styles.appTitle}>⚡ フリスケ</Text>
           <View style={styles.headerRight}>
             {/* 未同期タスク数バッジ */}
             {todayTasks.length > 0 && (
