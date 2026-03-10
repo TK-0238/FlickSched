@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "FlickSched",
+    "slug": "flicksched",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "flicksched",
+    "splash": {
+      "backgroundColor": "#1a1a2e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.flicksched.app",
+      "infoPlist": {
+        "NSCalendarsUsageDescription": "カレンダーに予定を追加するためにアクセスが必要です",
+        "NSCalendarsFullAccessUsageDescription": "カレンダーに予定を追加するためにアクセスが必要です"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1a1a2e"
+      },
+      "package": "com.flicksched.app",
+      "permissions": [
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "カレンダーに予定を追加するためにアクセスが必要です"
+        }
+      ]
+    ]
+  }
+}
