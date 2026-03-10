@@ -128,7 +128,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
             </LinearGradient>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+          <ScrollView showsVerticalScrollIndicator={false} bounces={false} nestedScrollEnabled={true} keyboardShouldPersistTaps="handled">
             {/* タスク名 */}
             <Text style={styles.sectionLabel}>タスク名</Text>
             <TextInput
@@ -286,7 +286,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
 
             {/* 時間選択 */}
             <Text style={styles.timeSubLabel}>時</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled={true}>
               <View style={styles.timeRow}>
                 {Array.from({ length: 24 }, (_, i) => (
                   <Pressable
