@@ -1,6 +1,7 @@
-// 日付ナビゲーション — 上部の日付選択バー
+// 日付ナビゲーション — モダンなスリムバー
 import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants';
 import { formatDateDisplay, getTodayString, getTomorrowString } from '../utils/time';
 
@@ -29,44 +30,67 @@ export function DateNavigator({ selectedDate, onDateChange }: Props) {
 
   return (
     <View style={styles.container}>
-      <Pressable onPress={goBack} style={styles.arrowBtn}>
-        <Text style={styles.arrow}>◀</Text>
-      </Pressable>
-
-      <Pressable
-        onPress={() => onDateChange(today)}
-        style={styles.dateSection}
+      <LinearGradient
+        colors={[COLORS.surfaceLight, COLORS.surface]}
+        style={styles.gradient}
       >
-        <Text style={styles.dateText}>
-          📅 {formatDateDisplay(selectedDate)}
-        </Text>
-        {isToday && <Text style={styles.todayBadge}>今日</Text>}
-        {selectedDate === tomorrow && <Text style={styles.tomorrowBadge}>明日</Text>}
-      </Pressable>
+        <Pressable
+          onPress={goBack}
+          style={({ pressed }) => [styles.arrowBtn, pressed && { opacity: 0.5 }]}
+        >
+          <Text style={styles.arrow}>‹</Text>
+        </Pressable>
 
-      <Pressable onPress={goForward} style={styles.arrowBtn}>
-        <Text style={styles.arrow}>▶</Text>
-      </Pressable>
+        <Pressable
+          onPress={() => onDateChange(today)}
+          style={styles.dateSection}
+        >
+          <Text style={styles.dateText}>
+            {formatDateDisplay(selectedDate)}
+          </Text>
+          {isToday && (
+            <View style={styles.todayBadge}>
+              <Text style={styles.todayBadgeText}>今日</Text>
+            </View>
+          )}
+          {selectedDate === tomorrow && (
+            <View style={styles.tomorrowBadge}>
+              <Text style={styles.tomorrowBadgeText}>明日</Text>
+            </View>
+          )}
+        </Pressable>
+
+        <Pressable
+          onPress={goForward}
+          style={({ pressed }) => [styles.arrowBtn, pressed && { opacity: 0.5 }]}
+        >
+          <Text style={styles.arrow}>›</Text>
+        </Pressable>
+      </LinearGradient>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    overflow: 'hidden',
+  },
+  gradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
   arrowBtn: {
     padding: 8,
+    paddingHorizontal: 14,
   },
   arrow: {
-    fontSize: 16,
+    fontSize: 28,
+    fontWeight: '300',
     color: COLORS.primary,
   },
   dateSection: {
@@ -77,26 +101,35 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dateText: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: COLORS.text,
+    letterSpacing: 0.5,
   },
   todayBadge: {
+    backgroundColor: COLORS.primaryGlow,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
+  },
+  todayBadgeText: {
     fontSize: 11,
+    fontWeight: '700',
     color: COLORS.primary,
-    backgroundColor: 'rgba(78,205,196,0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    overflow: 'hidden',
   },
   tomorrowBadge: {
+    backgroundColor: COLORS.successGlow,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.success + '30',
+  },
+  tomorrowBadgeText: {
     fontSize: 11,
+    fontWeight: '700',
     color: COLORS.success,
-    backgroundColor: 'rgba(130,224,170,0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    overflow: 'hidden',
   },
 });

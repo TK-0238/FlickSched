@@ -16,6 +16,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -392,28 +393,33 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         {/* ヘッダー */}
-        <View style={styles.header}>
+        <LinearGradient
+          colors={[COLORS.headerGradientStart, COLORS.headerGradientEnd]}
+          style={styles.header}
+        >
           <Pressable
             onPress={() => router.push('/settings')}
-            style={styles.settingsBtn}
+            style={({ pressed }) => [styles.settingsBtn, pressed && { opacity: 0.6 }]}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.settingsBtnText}>設定</Text>
+            <Text style={styles.settingsBtnText}>⚙ 設定</Text>
           </Pressable>
           <Text style={styles.appTitle}>⚡ フリスケ</Text>
           <View style={styles.headerRight}>
-            {/* 未同期タスク数バッジ */}
             {todayTasks.length > 0 && (
-              <Pressable onPress={handleSyncAll} style={styles.syncAllBtn}>
+              <Pressable
+                onPress={handleSyncAll}
+                style={({ pressed }) => [styles.syncAllBtn, pressed && { opacity: 0.6 }]}
+              >
                 <Text style={styles.syncAllText}>
-                  📅 {todayTasks.filter(t => !t.synced).length > 0
-                    ? `${todayTasks.filter(t => !t.synced).length}件同期`
+                  {todayTasks.filter(t => !t.synced).length > 0
+                    ? `📅 ${todayTasks.filter(t => !t.synced).length}件`
                     : '✓ 同期済'}
                 </Text>
               </Pressable>
             )}
           </View>
-        </View>
+        </LinearGradient>
 
         {/* 日付ナビゲーション */}
         <DateNavigator
@@ -530,13 +536,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: COLORS.surface,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
   },
   appTitle: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '900',
     color: COLORS.primary,
+    letterSpacing: 1,
   },
   headerRight: {
     flexDirection: 'row',
@@ -544,26 +552,31 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   syncAllBtn: {
-    backgroundColor: 'rgba(78,205,196,0.15)',
-    paddingHorizontal: 12,
+    backgroundColor: COLORS.primaryGlow,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
   },
   syncAllText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.primary,
   },
   settingsBtn: {
-    backgroundColor: 'rgba(78,205,196,0.15)',
+    backgroundColor: COLORS.primaryGlow,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
   },
   settingsBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     color: COLORS.primary,
+    letterSpacing: 0.3,
   },
   timelineWrapper: {
     flex: 1,
@@ -571,20 +584,21 @@ const styles = StyleSheet.create({
   dragTimePreview: {
     position: 'absolute',
     left: SCREEN_WIDTH / 2 - 50,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 14,
     zIndex: 999,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 8,
+    backgroundColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
   },
   dragTimeText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a2e',
+    fontWeight: '800',
+    color: COLORS.background,
+    letterSpacing: 0.5,
   },
 });

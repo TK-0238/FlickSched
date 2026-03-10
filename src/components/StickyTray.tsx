@@ -1,7 +1,8 @@
-// 付箋トレイ — 画面下部の付箋一覧（横スクロール、ドラッグ対応）
+// 付箋トレイ — 画面下部のモダンな付箋一覧
 import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StickyNote } from './StickyNote';
 import { COLORS } from '../constants';
 import type { TaskTemplate } from '../types';
@@ -27,13 +28,22 @@ export function StickyTray({
 }: Props) {
   return (
     <View style={styles.container}>
+      <LinearGradient
+        colors={[COLORS.border, 'transparent']}
+        style={styles.topBorder}
+      />
       <View style={styles.header}>
-        <Text style={styles.label}>📌 タスク付箋 ({tasks.length})</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.label}>付箋</Text>
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{tasks.length}</Text>
+          </View>
+        </View>
         <Pressable
           onPress={onAddNew}
           style={({ pressed }) => [
             styles.headerAddBtn,
-            pressed && { opacity: 0.7 },
+            pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
           ]}
         >
           <Text style={styles.headerAddBtnText}>＋ 新規作成</Text>
@@ -41,7 +51,7 @@ export function StickyTray({
       </View>
       <ScrollView
         horizontal
-        showsHorizontalScrollIndicator={true}
+        showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         bounces={true}
         nestedScrollEnabled={true}
@@ -65,8 +75,13 @@ export function StickyTray({
             pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
           ]}
         >
-          <Text style={styles.addIcon}>＋</Text>
-          <Text style={styles.addLabel}>付箋を作る</Text>
+          <LinearGradient
+            colors={[COLORS.primaryGlow, 'transparent']}
+            style={styles.addButtonGradient}
+          >
+            <Text style={styles.addIcon}>＋</Text>
+            <Text style={styles.addLabel}>付箋を作る</Text>
+          </LinearGradient>
         </Pressable>
       </ScrollView>
     </View>
@@ -76,59 +91,90 @@ export function StickyTray({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: COLORS.trayBackground,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 10,
-    paddingBottom: 20,
+    paddingTop: 0,
+    paddingBottom: 16,
+  },
+  topBorder: {
+    height: 1,
+    width: '100%',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
+    paddingTop: 12,
     marginBottom: 10,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: COLORS.text,
+    letterSpacing: 0.5,
+  },
+  countBadge: {
+    backgroundColor: COLORS.primaryGlow,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  countText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   headerAddBtn: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 12,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   headerAddBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.background,
+    letterSpacing: 0.3,
   },
   scrollContent: {
     paddingHorizontal: 10,
     paddingRight: 30,
+    paddingBottom: 4,
     alignItems: 'center',
   },
   addButton: {
-    width: 90,
-    height: 90,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
+    width: 88,
+    height: 96,
+    borderRadius: 16,
+    marginHorizontal: 5,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: COLORS.primary + '40',
     borderStyle: 'dashed',
+  },
+  addButtonGradient: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 6,
-    backgroundColor: 'rgba(78, 205, 196, 0.08)',
+    borderRadius: 16,
   },
   addIcon: {
-    fontSize: 28,
+    fontSize: 26,
     color: COLORS.primary,
   },
   addLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: COLORS.primary,
     marginTop: 4,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });

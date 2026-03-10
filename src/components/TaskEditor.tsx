@@ -1,4 +1,4 @@
-// タスク作成・編集モーダル
+// タスク作成・編集モーダル — モダンデザイン
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -11,10 +11,10 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, STICKY_COLORS, DURATION_OPTIONS } from '../constants';
 import type { TaskTemplate } from '../types';
 
-// よく使う絵文字リスト
 const EMOJI_LIST = [
   '💼', '🍱', '💪', '📚', '📧', '☕', '🏥', '🛒',
   '🎯', '💻', '🎵', '🚗', '✈️', '📞', '🎮', '🧹',
@@ -23,7 +23,7 @@ const EMOJI_LIST = [
 
 interface Props {
   visible: boolean;
-  task?: TaskTemplate | null;  // nullなら新規作成、あれば編集
+  task?: TaskTemplate | null;
   onSave: (task: Omit<TaskTemplate, 'id'>) => void;
   onDelete?: (id: string) => void;
   onClose: () => void;
@@ -36,7 +36,6 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
   const [icon, setIcon] = useState('💼');
   const [defaultStartTime, setDefaultStartTime] = useState('');
 
-  // 編集時は既存値をセット
   useEffect(() => {
     if (task) {
       setTitle(task.title);
@@ -72,116 +71,145 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
         style={styles.overlay}
       >
         <View style={styles.modal}>
+          {/* ハンドルバー */}
+          <View style={styles.handleBar} />
+
           <Text style={styles.modalTitle}>
             {task ? '付箋を編集' : '新しい付箋'}
           </Text>
 
           {/* プレビュー */}
-          <View style={[styles.preview, { backgroundColor: color }]}>
-            <Text style={styles.previewIcon}>{icon}</Text>
-            <Text style={styles.previewTitle}>{title || 'タスク名'}</Text>
-            <Text style={styles.previewDuration}>{duration}分</Text>
+          <View style={styles.previewContainer}>
+            <LinearGradient
+              colors={[color, color + 'CC']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.preview}
+            >
+              <View style={styles.previewSheen} />
+              <Text style={styles.previewIcon}>{icon}</Text>
+              <Text style={styles.previewTitle}>{title || 'タスク名'}</Text>
+              <View style={styles.previewDurationBadge}>
+                <Text style={styles.previewDuration}>{duration}分</Text>
+              </View>
+            </LinearGradient>
           </View>
 
-          {/* タスク名 */}
-          <Text style={styles.sectionLabel}>タスク名</Text>
-          <TextInput
-            style={styles.input}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="例: 会議、ランチ、ジム..."
-            placeholderTextColor={COLORS.textMuted}
-            maxLength={20}
-          />
+          <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+            {/* タスク名 */}
+            <Text style={styles.sectionLabel}>タスク名</Text>
+            <TextInput
+              style={styles.input}
+              value={title}
+              onChangeText={setTitle}
+              placeholder="例: 会議、ランチ、ジム..."
+              placeholderTextColor={COLORS.textMuted}
+              maxLength={20}
+            />
 
-          {/* アイコン選択 */}
-          <Text style={styles.sectionLabel}>アイコン</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.emojiRow}>
-              {EMOJI_LIST.map(e => (
+            {/* アイコン選択 */}
+            <Text style={styles.sectionLabel}>アイコン</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.emojiRow}>
+                {EMOJI_LIST.map(e => (
+                  <Pressable
+                    key={e}
+                    onPress={() => setIcon(e)}
+                    style={[
+                      styles.emojiBtn,
+                      icon === e && styles.emojiSelected,
+                    ]}
+                  >
+                    <Text style={styles.emoji}>{e}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+
+            {/* 所要時間 */}
+            <Text style={styles.sectionLabel}>所要時間</Text>
+            <View style={styles.durationRow}>
+              {DURATION_OPTIONS.map(d => (
                 <Pressable
-                  key={e}
-                  onPress={() => setIcon(e)}
+                  key={d}
+                  onPress={() => setDuration(d)}
                   style={[
-                    styles.emojiBtn,
-                    icon === e && styles.emojiSelected,
+                    styles.durationBtn,
+                    duration === d && styles.durationBtnActive,
                   ]}
                 >
-                  <Text style={styles.emoji}>{e}</Text>
+                  <Text style={[
+                    styles.durationText,
+                    duration === d && styles.durationTextActive,
+                  ]}>
+                    {d >= 60 ? `${d / 60}時間` : `${d}分`}
+                  </Text>
                 </Pressable>
               ))}
             </View>
+
+            {/* 色選択 */}
+            <Text style={styles.sectionLabel}>付箋の色</Text>
+            <View style={styles.colorRow}>
+              {STICKY_COLORS.map(c => (
+                <Pressable
+                  key={c}
+                  onPress={() => setColor(c)}
+                  style={[
+                    styles.colorBtn,
+                    { backgroundColor: c },
+                    color === c && styles.colorSelected,
+                  ]}
+                >
+                  {color === c && <Text style={styles.colorCheck}>✓</Text>}
+                </Pressable>
+              ))}
+            </View>
+
+            {/* デフォルト開始時刻 */}
+            <Text style={styles.sectionLabel}>デフォルト開始時刻（任意）</Text>
+            <TextInput
+              style={styles.input}
+              value={defaultStartTime}
+              onChangeText={setDefaultStartTime}
+              placeholder="例: 09:00"
+              placeholderTextColor={COLORS.textMuted}
+              keyboardType="numbers-and-punctuation"
+              maxLength={5}
+            />
           </ScrollView>
-
-          {/* 所要時間 */}
-          <Text style={styles.sectionLabel}>所要時間</Text>
-          <View style={styles.durationRow}>
-            {DURATION_OPTIONS.map(d => (
-              <Pressable
-                key={d}
-                onPress={() => setDuration(d)}
-                style={[
-                  styles.durationBtn,
-                  duration === d && { backgroundColor: COLORS.primary },
-                ]}
-              >
-                <Text style={[
-                  styles.durationText,
-                  duration === d && { color: '#1a1a2e' },
-                ]}>
-                  {d >= 60 ? `${d / 60}時間` : `${d}分`}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {/* 色選択 */}
-          <Text style={styles.sectionLabel}>付箋の色</Text>
-          <View style={styles.colorRow}>
-            {STICKY_COLORS.map(c => (
-              <Pressable
-                key={c}
-                onPress={() => setColor(c)}
-                style={[
-                  styles.colorBtn,
-                  { backgroundColor: c },
-                  color === c && styles.colorSelected,
-                ]}
-              />
-            ))}
-          </View>
-
-          {/* デフォルト開始時刻 */}
-          <Text style={styles.sectionLabel}>デフォルト開始時刻（任意）</Text>
-          <TextInput
-            style={styles.input}
-            value={defaultStartTime}
-            onChangeText={setDefaultStartTime}
-            placeholder="例: 09:00"
-            placeholderTextColor={COLORS.textMuted}
-            keyboardType="numbers-and-punctuation"
-            maxLength={5}
-          />
 
           {/* ボタン */}
           <View style={styles.buttonRow}>
             {task && onDelete && (
               <Pressable
                 onPress={() => { onDelete(task.id); onClose(); }}
-                style={styles.deleteBtn}
+                style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.7 }]}
               >
                 <Text style={styles.deleteBtnText}>削除</Text>
               </Pressable>
             )}
-            <Pressable onPress={onClose} style={styles.cancelBtn}>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}
+            >
               <Text style={styles.cancelBtnText}>キャンセル</Text>
             </Pressable>
             <Pressable
               onPress={handleSave}
-              style={[styles.saveBtn, !title.trim() && { opacity: 0.5 }]}
+              style={({ pressed }) => [
+                styles.saveBtn,
+                !title.trim() && { opacity: 0.4 },
+                pressed && { opacity: 0.7 },
+              ]}
               disabled={!title.trim()}
             >
-              <Text style={styles.saveBtnText}>保存</Text>
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.primaryDark]}
+                style={styles.saveBtnGradient}
+              >
+                <Text style={styles.saveBtnText}>保存</Text>
+              </LinearGradient>
             </Pressable>
           </View>
         </View>
@@ -198,46 +226,86 @@ const styles = StyleSheet.create({
   },
   modal: {
     backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 20,
     maxHeight: '90%',
   },
+  handleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.text,
     textAlign: 'center',
     marginBottom: 16,
+    letterSpacing: 0.5,
+  },
+  previewContainer: {
+    alignSelf: 'center',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
   },
   preview: {
     width: 100,
-    height: 100,
-    borderRadius: 14,
-    alignSelf: 'center',
+    height: 108,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    overflow: 'hidden',
+  },
+  previewSheen: {
+    position: 'absolute',
+    top: -15,
+    left: -15,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   previewIcon: { fontSize: 32 },
-  previewTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a2e', marginTop: 2 },
-  previewDuration: { fontSize: 10, color: 'rgba(26,26,46,0.6)', marginTop: 1 },
+  previewTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: 'rgba(0,0,0,0.75)',
+    marginTop: 2,
+    letterSpacing: 0.3,
+  },
+  previewDurationBadge: {
+    marginTop: 3,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 1,
+    borderRadius: 8,
+  },
+  previewDuration: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(0,0,0,0.6)',
+  },
   sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     color: COLORS.textSecondary,
     marginBottom: 8,
-    marginTop: 12,
+    marginTop: 14,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   input: {
     backgroundColor: COLORS.surfaceLight,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
     fontSize: 16,
     color: COLORS.text,
     borderWidth: 1,
@@ -245,12 +313,12 @@ const styles = StyleSheet.create({
   },
   emojiRow: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 6,
   },
   emojiBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceLight,
@@ -258,6 +326,7 @@ const styles = StyleSheet.create({
   emojiSelected: {
     borderWidth: 2,
     borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryGlow,
   },
   emoji: { fontSize: 22 },
   durationRow: {
@@ -267,26 +336,40 @@ const styles = StyleSheet.create({
   },
   durationBtn: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 9,
+    borderRadius: 12,
     backgroundColor: COLORS.surfaceLight,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  durationBtnActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   durationText: {
     fontSize: 14,
     color: COLORS.text,
     fontWeight: '600',
   },
+  durationTextActive: {
+    color: COLORS.background,
+    fontWeight: '800',
+  },
   colorRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   colorBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   colorSelected: {
     borderWidth: 3,
@@ -295,34 +378,49 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.4,
     shadowRadius: 3,
+    transform: [{ scale: 1.15 }],
+  },
+  colorCheck: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: 'rgba(0,0,0,0.5)',
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 12,
+    gap: 10,
     marginTop: 24,
     marginBottom: 10,
   },
   deleteBtn: {
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: COLORS.danger,
+    borderRadius: 14,
+    backgroundColor: COLORS.dangerGlow,
+    borderWidth: 1,
+    borderColor: COLORS.danger + '40',
     marginRight: 'auto',
   },
-  deleteBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  deleteBtnText: { color: COLORS.danger, fontWeight: '700', fontSize: 15 },
   cancelBtn: {
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 14,
     backgroundColor: COLORS.surfaceLight,
   },
   cancelBtnText: { color: COLORS.textSecondary, fontWeight: '600', fontSize: 15 },
   saveBtn: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  saveBtnGradient: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
+    borderRadius: 14,
   },
-  saveBtnText: { color: '#1a1a2e', fontWeight: '700', fontSize: 15 },
+  saveBtnText: { color: COLORS.background, fontWeight: '800', fontSize: 15 },
 });

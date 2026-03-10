@@ -1,6 +1,6 @@
-// 付箋カード — ドラッグ可能な付箋（タップ / 長押し / ドラッグ対応）
+// 付箋カード — モダンなデザインのドラッグ可能カード
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants';
 import type { TaskTemplate } from '../types';
 
@@ -59,7 +60,6 @@ export function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, 
     })
     .onEnd((e) => {
       isDragging.value = false;
-      // ドロップ完了 → 元の位置に戻す
       translateX.value = withSpring(0, { damping: 15 });
       translateY.value = withSpring(0, { damping: 15 });
       scale.value = withSpring(1, { damping: 12 });
@@ -67,7 +67,6 @@ export function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, 
       if (onDragEnd) runOnJS(onDragEnd)(task, e.absoluteY);
     })
     .onFinalize(() => {
-      // キャンセル時もリセット
       if (isDragging.value) {
         isDragging.value = false;
         translateX.value = withSpring(0, { damping: 15 });
@@ -77,7 +76,6 @@ export function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, 
       }
     });
 
-  // タップ→パン→長押しの優先度を設定
   const composedGesture = Gesture.Race(
     panGesture,
     Gesture.Exclusive(longPressGesture, tapGesture),
@@ -94,16 +92,21 @@ export function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, 
 
   return (
     <GestureDetector gesture={composedGesture}>
-      <Animated.View
-        style={[
-          styles.container,
-          { backgroundColor: task.color },
-          animatedStyle,
-        ]}
-      >
-        <Text style={styles.icon}>{task.icon}</Text>
-        <Text style={styles.title} numberOfLines={1}>{task.title}</Text>
-        <Text style={styles.duration}>{task.duration}分</Text>
+      <Animated.View style={[styles.container, animatedStyle]}>
+        <LinearGradient
+          colors={[task.color, task.color + 'CC']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gradient}
+        >
+          {/* 光沢エフェクト */}
+          <View style={styles.sheen} />
+          <Text style={styles.icon}>{task.icon}</Text>
+          <Text style={styles.title} numberOfLines={1}>{task.title}</Text>
+          <View style={styles.durationBadge}>
+            <Text style={styles.duration}>{task.duration}分</Text>
+          </View>
+        </LinearGradient>
       </Animated.View>
     </GestureDetector>
   );
@@ -111,32 +114,54 @@ export function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, 
 
 const styles = StyleSheet.create({
   container: {
-    width: 90,
-    height: 90,
-    borderRadius: 12,
-    padding: 8,
-    marginHorizontal: 6,
+    width: 88,
+    height: 96,
+    borderRadius: 16,
+    marginHorizontal: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  gradient: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    overflow: 'hidden',
+  },
+  sheen: {
+    position: 'absolute',
+    top: -20,
+    left: -20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   icon: {
-    fontSize: 28,
+    fontSize: 30,
     marginBottom: 4,
   },
   title: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1a1a2e',
+    fontSize: 12,
+    fontWeight: '800',
+    color: 'rgba(0,0,0,0.75)',
     textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+  durationBadge: {
+    marginTop: 3,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 1,
+    borderRadius: 8,
   },
   duration: {
-    fontSize: 10,
-    color: 'rgba(26,26,46,0.6)',
-    marginTop: 2,
+    fontSize: 9,
+    fontWeight: '700',
+    color: 'rgba(0,0,0,0.6)',
   },
 });

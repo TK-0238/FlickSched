@@ -1,4 +1,4 @@
-// 初回起動時のオンボーディング画面 — 使い方ガイド
+// 初回起動時オンボーディング — モダンデザイン
 import React from 'react';
 import {
   StyleSheet,
@@ -13,6 +13,7 @@ import Animated, {
   FadeOut,
   SlideInDown,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -22,7 +23,6 @@ interface OnboardingProps {
   onClose: () => void;
 }
 
-// 使い方のステップ一覧
 const STEPS = [
   {
     emoji: '👆',
@@ -64,41 +64,48 @@ export const Onboarding: React.FC<OnboardingProps> = ({ visible, onClose }) => {
           entering={SlideInDown.springify().damping(15).stiffness(120)}
           style={styles.card}
         >
-          {/* ヘッダー */}
-          <Text style={styles.title}>⚡ フリスケの使い方</Text>
-          <Text style={styles.subtitle}>
-            付箋をタップするだけで{'\n'}予定がサクッと決まる！
-          </Text>
+          <View style={styles.cardInner}>
+            <Text style={styles.title}>⚡ フリスケ</Text>
+            <Text style={styles.subtitle}>
+              付箋をタップするだけで{'\n'}予定がサクッと決まる！
+            </Text>
 
-          {/* ステップ一覧 */}
-          <View style={styles.stepsContainer}>
-            {STEPS.map((step, index) => (
-              <Animated.View
-                key={index}
-                entering={FadeIn.delay(index * 100 + 200)}
-                style={styles.stepRow}
+            <View style={styles.stepsContainer}>
+              {STEPS.map((step, index) => (
+                <Animated.View
+                  key={index}
+                  entering={FadeIn.delay(index * 100 + 200)}
+                  style={styles.stepRow}
+                >
+                  <LinearGradient
+                    colors={[COLORS.primaryGlow, 'transparent']}
+                    style={styles.emojiCircle}
+                  >
+                    <Text style={styles.emoji}>{step.emoji}</Text>
+                  </LinearGradient>
+                  <View style={styles.stepContent}>
+                    <Text style={styles.actionText}>{step.action}</Text>
+                    <Text style={styles.descText}>{step.description}</Text>
+                  </View>
+                </Animated.View>
+              ))}
+            </View>
+
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.startBtn,
+                pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
+              ]}
+            >
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.primaryDark]}
+                style={styles.startBtnGradient}
               >
-                <View style={styles.emojiCircle}>
-                  <Text style={styles.emoji}>{step.emoji}</Text>
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={styles.actionText}>{step.action}</Text>
-                  <Text style={styles.descText}>{step.description}</Text>
-                </View>
-              </Animated.View>
-            ))}
+                <Text style={styles.startBtnText}>はじめる 🚀</Text>
+              </LinearGradient>
+            </Pressable>
           </View>
-
-          {/* 開始ボタン */}
-          <Pressable
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.startBtn,
-              pressed && styles.startBtnPressed,
-            ]}
-          >
-            <Text style={styles.startBtnText}>はじめる 🚀</Text>
-          </Pressable>
         </Animated.View>
       </View>
     </Modal>
@@ -108,7 +115,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ visible, onClose }) => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.75)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -116,32 +123,35 @@ const styles = StyleSheet.create({
   card: {
     width: SCREEN_WIDTH - 48,
     backgroundColor: COLORS.surface,
-    borderRadius: 24,
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 16,
+  },
+  cardInner: {
     padding: 28,
     alignItems: 'center',
-    // シャドウ
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 26,
+    fontWeight: '900',
     color: COLORS.primary,
     marginBottom: 8,
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
   },
   stepsContainer: {
     width: '100%',
-    gap: 16,
+    gap: 14,
     marginBottom: 28,
   },
   stepRow: {
@@ -150,10 +160,9 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   emojiCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(78,205,196,0.12)',
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -164,10 +173,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionText: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
     color: COLORS.primary,
     marginBottom: 2,
+    letterSpacing: 0.3,
   },
   descText: {
     fontSize: 13,
@@ -175,18 +185,22 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   startBtn: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 40,
-    paddingVertical: 14,
-    borderRadius: 20,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  startBtnPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.97 }],
+  startBtnGradient: {
+    paddingHorizontal: 44,
+    paddingVertical: 14,
+    borderRadius: 16,
   },
   startBtnText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.background,
+    letterSpacing: 0.5,
   },
 });

@@ -1,4 +1,4 @@
-// タスクアクションモーダル — 配置済みタスクをタップした時のアクション選択
+// タスクアクションモーダル — モダンなカードスタイルのアクション選択
 import React from 'react';
 import {
   StyleSheet,
@@ -7,6 +7,7 @@ import {
   Pressable,
   Modal,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants';
 import type { ScheduledTask } from '../types';
 
@@ -31,23 +32,31 @@ export function TaskActionModal({
     <Modal visible={visible} animationType="fade" transparent>
       <Pressable style={styles.overlay} onPress={onClose}>
         <View style={styles.modal}>
-          {/* タスク情報 */}
-          <View style={[styles.header, { backgroundColor: task.color }]}>
+          {/* タスクヘッダー */}
+          <LinearGradient
+            colors={[task.color, task.color + 'CC']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.header}
+          >
+            <View style={styles.headerSheen} />
             <Text style={styles.headerIcon}>{task.icon}</Text>
-            <View>
+            <View style={styles.headerInfo}>
               <Text style={styles.headerTitle}>{task.title}</Text>
               <Text style={styles.headerTime}>
-                {task.startTime} - {task.endTime} ({task.duration}分)
+                {task.startTime} – {task.endTime}（{task.duration}分）
               </Text>
             </View>
-          </View>
+          </LinearGradient>
 
           {/* アクションボタン */}
           <Pressable
-            style={styles.actionBtn}
+            style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: COLORS.surfaceLight }]}
             onPress={() => { onSyncCalendar(task); onClose(); }}
           >
-            <Text style={styles.actionIcon}>📅</Text>
+            <View style={styles.actionIconWrap}>
+              <Text style={styles.actionIcon}>📅</Text>
+            </View>
             <View style={styles.actionInfo}>
               <Text style={styles.actionText}>カレンダーに追加</Text>
               <Text style={styles.actionHint}>
@@ -57,14 +66,22 @@ export function TaskActionModal({
           </Pressable>
 
           <Pressable
-            style={[styles.actionBtn, styles.dangerAction]}
+            style={({ pressed }) => [
+              styles.actionBtn,
+              pressed && { backgroundColor: COLORS.dangerGlow },
+            ]}
             onPress={() => { onRemove(task); onClose(); }}
           >
-            <Text style={styles.actionIcon}>🗑️</Text>
-            <Text style={styles.actionText}>予定から削除</Text>
+            <View style={[styles.actionIconWrap, { backgroundColor: COLORS.dangerGlow }]}>
+              <Text style={styles.actionIcon}>🗑️</Text>
+            </View>
+            <Text style={[styles.actionText, { color: COLORS.danger }]}>予定から削除</Text>
           </Pressable>
 
-          <Pressable style={styles.closeBtn} onPress={onClose}>
+          <Pressable
+            style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.6 }]}
+            onPress={onClose}
+          >
             <Text style={styles.closeBtnText}>閉じる</Text>
           </Pressable>
         </View>
@@ -83,61 +100,85 @@ const styles = StyleSheet.create({
   },
   modal: {
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
+    borderRadius: 20,
     width: '100%',
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 12,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    gap: 12,
+    padding: 18,
+    gap: 14,
+    overflow: 'hidden',
   },
-  headerIcon: { fontSize: 32 },
+  headerSheen: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  headerIcon: { fontSize: 36 },
+  headerInfo: { flex: 1 },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a2e',
+    fontSize: 20,
+    fontWeight: '800',
+    color: 'rgba(0,0,0,0.75)',
+    letterSpacing: 0.3,
   },
   headerTime: {
     fontSize: 13,
-    color: 'rgba(26,26,46,0.7)',
+    fontWeight: '600',
+    color: 'rgba(0,0,0,0.5)',
     marginTop: 2,
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    gap: 12,
-    borderTopWidth: 1,
+    gap: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: COLORS.border,
+  },
+  actionIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   actionInfo: {
     flex: 1,
   },
-  actionIcon: { fontSize: 22 },
+  actionIcon: { fontSize: 20 },
   actionText: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.text,
-    fontWeight: '500',
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   actionHint: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.textMuted,
     marginTop: 2,
-  },
-  dangerAction: {
-    // 削除ボタン用
   },
   closeBtn: {
     padding: 16,
     alignItems: 'center',
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: COLORS.border,
   },
   closeBtnText: {
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.textMuted,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });

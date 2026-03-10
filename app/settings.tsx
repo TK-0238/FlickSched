@@ -1,4 +1,4 @@
-// 設定画面 — カレンダー連携・アプリ情報
+// 設定画面 — モダンデザイン
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
@@ -28,7 +29,6 @@ import {
 } from '../src/utils/calendar';
 import type { CalendarSettings } from '../src/types';
 
-// Expo Goでのリダイレクト処理に必要
 WebBrowser.maybeCompleteAuthSession();
 
 export default function SettingsScreen() {
@@ -151,9 +151,12 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* カスタムヘッダー（閉じるボタン付き） */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>⚙️ 設定</Text>
+      {/* カスタムヘッダー */}
+      <LinearGradient
+        colors={[COLORS.headerGradientStart, COLORS.headerGradientEnd]}
+        style={styles.header}
+      >
+        <Text style={styles.headerTitle}>⚙ 設定</Text>
         <Pressable
           onPress={() => router.back()}
           style={({ pressed }) => [
@@ -163,21 +166,22 @@ export default function SettingsScreen() {
         >
           <Text style={styles.closeBtnText}>✕ 閉じる</Text>
         </Pressable>
-      </View>
+      </LinearGradient>
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* カレンダー連携 */}
-        <Text style={styles.sectionTitle}>📅 カレンダー連携</Text>
+        <Text style={styles.sectionLabel}>カレンダー連携</Text>
 
         {/* Appleカレンダー */}
         <View style={styles.calendarCard}>
           <View style={styles.calendarCardHeader}>
-            <Text style={styles.calendarIcon}>🍎</Text>
+            <View style={styles.iconWrap}>
+              <Text style={styles.calendarIcon}>🍎</Text>
+            </View>
             <View style={styles.calendarCardInfo}>
               <Text style={styles.calendarCardTitle}>Appleカレンダー</Text>
               <Text style={styles.calendarCardHint}>
                 {settings.appleCalendarEnabled
-                  ? `✅ 接続済み（${calendars.length}件のカレンダー）`
+                  ? `✅ 接続済み（${calendars.length}件）`
                   : '端末のカレンダーに予定を追加'}
               </Text>
             </View>
@@ -188,18 +192,20 @@ export default function SettingsScreen() {
             style={({ pressed }) => [
               styles.connectBtn,
               settings.appleCalendarEnabled && styles.disconnectBtn,
-              pressed && styles.btnPressed,
+              pressed && { opacity: 0.7, transform: [{ scale: 0.98 }] },
             ]}
           >
             {connecting ? (
               <ActivityIndicator size="small" color="#fff" />
+            ) : settings.appleCalendarEnabled ? (
+              <Text style={styles.disconnectBtnText}>切断する</Text>
             ) : (
-              <Text style={[
-                styles.connectBtnText,
-                settings.appleCalendarEnabled && styles.disconnectBtnText,
-              ]}>
-                {settings.appleCalendarEnabled ? '切断する' : '接続する'}
-              </Text>
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.primaryDark]}
+                style={styles.connectBtnGradient}
+              >
+                <Text style={styles.connectBtnText}>接続する</Text>
+              </LinearGradient>
             )}
           </Pressable>
         </View>
@@ -207,7 +213,9 @@ export default function SettingsScreen() {
         {/* Googleカレンダー */}
         <View style={styles.calendarCard}>
           <View style={styles.calendarCardHeader}>
-            <Text style={styles.calendarIcon}>📆</Text>
+            <View style={styles.iconWrap}>
+              <Text style={styles.calendarIcon}>📆</Text>
+            </View>
             <View style={styles.calendarCardInfo}>
               <Text style={styles.calendarCardTitle}>Googleカレンダー</Text>
               <Text style={styles.calendarCardHint}>
@@ -223,26 +231,28 @@ export default function SettingsScreen() {
             style={({ pressed }) => [
               styles.connectBtn,
               settings.googleCalendarEnabled && styles.disconnectBtn,
-              pressed && styles.btnPressed,
+              pressed && { opacity: 0.7, transform: [{ scale: 0.98 }] },
             ]}
           >
             {googleConnecting ? (
               <ActivityIndicator size="small" color="#fff" />
+            ) : settings.googleCalendarEnabled ? (
+              <Text style={styles.disconnectBtnText}>切断する</Text>
             ) : (
-              <Text style={[
-                styles.connectBtnText,
-                settings.googleCalendarEnabled && styles.disconnectBtnText,
-              ]}>
-                {settings.googleCalendarEnabled ? '切断する' : 'Googleでログイン'}
-              </Text>
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.primaryDark]}
+                style={styles.connectBtnGradient}
+              >
+                <Text style={styles.connectBtnText}>Googleでログイン</Text>
+              </LinearGradient>
             )}
           </Pressable>
         </View>
 
-        {/* 接続済みカレンダー一覧 */}
+        {/* 検出カレンダー一覧 */}
         {calendars.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>📋 検出されたカレンダー</Text>
+            <Text style={styles.sectionLabel}>検出されたカレンダー</Text>
             {calendars.map(cal => (
               <View key={cal.id} style={styles.calendarItem}>
                 <View
@@ -257,10 +267,9 @@ export default function SettingsScreen() {
           </>
         )}
 
-        {/* アプリ情報 */}
-        <Text style={styles.sectionTitle}>ℹ️ アプリ情報</Text>
+        <Text style={styles.sectionLabel}>アプリ情報</Text>
         <View style={styles.infoCard}>
-          <Text style={styles.infoText}>フリスケ v1.0.0</Text>
+          <Text style={styles.infoTitle}>⚡ フリスケ v1.0.0</Text>
           <Text style={styles.infoSubtext}>
             予定を立てるのがめんどくさい人のための{'\n'}
             ワンタップスケジューリングアプリ
@@ -283,52 +292,67 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '900',
     color: COLORS.text,
+    letterSpacing: 0.5,
   },
   closeBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryGlow,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
   },
   closeBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    color: COLORS.background,
+    color: COLORS.primary,
   },
   container: {
     flex: 1,
     padding: 16,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
     marginTop: 24,
     marginBottom: 12,
+    marginLeft: 4,
   },
-  // カレンダーカード
   calendarCard: {
     backgroundColor: COLORS.surface,
     padding: 16,
-    borderRadius: 14,
+    borderRadius: 16,
     marginBottom: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.borderLight,
   },
   calendarCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 14,
   },
-  calendarIcon: {
-    fontSize: 28,
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
+  },
+  calendarIcon: {
+    fontSize: 24,
   },
   calendarCardInfo: {
     flex: 1,
@@ -337,52 +361,56 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: COLORS.text,
+    letterSpacing: 0.3,
   },
   calendarCardHint: {
     fontSize: 12,
     color: COLORS.textMuted,
     marginTop: 3,
   },
-  // 接続ボタン
   connectBtn: {
-    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  connectBtnGradient: {
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
   },
   connectBtnText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.background,
+    letterSpacing: 0.3,
   },
   disconnectBtn: {
-    backgroundColor: 'rgba(255,107,107,0.15)',
+    backgroundColor: COLORS.dangerGlow,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 12,
   },
   disconnectBtnText: {
-    color: '#FF6B6B',
-  },
-  comingSoonBtn: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  comingSoonText: {
-    color: COLORS.textMuted,
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.danger,
   },
   btnPressed: {
     opacity: 0.7,
   },
-  // カレンダー一覧
   calendarItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.borderLight,
   },
   calendarDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     marginRight: 12,
   },
   calendarInfo: {
@@ -391,24 +419,26 @@ const styles = StyleSheet.create({
   calendarName: {
     fontSize: 14,
     color: COLORS.text,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   calendarSource: {
     fontSize: 11,
     color: COLORS.textMuted,
     marginTop: 2,
   },
-  // アプリ情報
   infoCard: {
     backgroundColor: COLORS.surface,
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 16,
     alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.borderLight,
   },
-  infoText: {
-    fontSize: 16,
-    fontWeight: '700',
+  infoTitle: {
+    fontSize: 18,
+    fontWeight: '900',
     color: COLORS.primary,
+    letterSpacing: 0.5,
   },
   infoSubtext: {
     fontSize: 13,

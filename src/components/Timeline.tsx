@@ -1,4 +1,4 @@
-// タイムライン — 0〜24時の縦スクロール + 配置済みタスク表示 + スワイプ削除
+// タイムライン — モダンデザインの0〜24時縦スクロール + スワイプ削除
 import React, { useRef, useEffect } from 'react';
 import {
   StyleSheet,
@@ -16,6 +16,7 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, TIMELINE } from '../constants';
 import { generateTimeSlots, minutesToYPosition, timeToMinutes } from '../utils/time';
 import type { ScheduledTask } from '../types';
@@ -32,7 +33,7 @@ interface Props {
   onScroll?: (event: any) => void;
 }
 
-// スワイプ削除可能なタスクブロック
+// スワイプ削除可能なタスクブロック（モダンデザイン）
 function SwipeableTaskBlock({
   task,
   taskY,
@@ -55,7 +56,6 @@ function SwipeableTaskBlock({
     .activeOffsetX([-15, 15])
     .failOffsetY([-5, 5])
     .onUpdate((e) => {
-      // 左方向のみ許可
       if (e.translationX < 0) {
         translateX.value = Math.max(e.translationX, -120);
         deleteOpacity.value = Math.min(Math.abs(e.translationX) / 80, 1);
@@ -63,11 +63,9 @@ function SwipeableTaskBlock({
     })
     .onEnd((e) => {
       if (e.translationX < -80 && onSwipeDelete) {
-        // 十分にスワイプしたら削除
         translateX.value = withTiming(-400, { duration: 200 });
         runOnJS(onSwipeDelete)(task);
       } else {
-        // 元に戻す
         translateX.value = withSpring(0, { damping: 15 });
         deleteOpacity.value = withTiming(0, { duration: 150 });
       }
@@ -100,10 +98,10 @@ function SwipeableTaskBlock({
     <View
       style={[
         styles.taskBlockWrapper,
-        { top: taskY + 1, height: Math.max(taskHeight - 2, 28), left: 60, right: 12 },
+        { top: taskY + 1, height: Math.max(taskHeight - 2, 32), left: 56, right: 12 },
       ]}
     >
-      {/* 削除ヒント（赤い背景） */}
+      {/* 削除ヒント */}
       <Animated.View style={[styles.deleteHint, deleteHintStyle]}>
         <Text style={styles.deleteHintText}>🗑 削除</Text>
       </Animated.View>
@@ -112,22 +110,35 @@ function SwipeableTaskBlock({
         <Animated.View
           style={[
             styles.taskBlock,
-            { backgroundColor: task.color, height: '100%' },
+            { height: '100%' },
             animatedStyle,
           ]}
         >
-          <View style={styles.taskContent}>
-            <Text style={styles.taskIcon}>{task.icon}</Text>
-            <View style={styles.taskInfo}>
-              <Text style={styles.taskTitle} numberOfLines={1}>
-                {task.title}
-              </Text>
-              <Text style={styles.taskTime}>
-                {task.startTime} - {task.endTime}
-              </Text>
+          <LinearGradient
+            colors={[task.color, task.color + 'BB']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.taskBlockGradient}
+          >
+            {/* 左ボーダーアクセント */}
+            <View style={[styles.taskLeftBorder, { backgroundColor: task.color }]} />
+            <View style={styles.taskContent}>
+              <Text style={styles.taskIcon}>{task.icon}</Text>
+              <View style={styles.taskInfo}>
+                <Text style={styles.taskTitle} numberOfLines={1}>
+                  {task.title}
+                </Text>
+                <Text style={styles.taskTime}>
+                  {task.startTime} – {task.endTime}
+                </Text>
+              </View>
+              {task.synced && (
+                <View style={styles.syncBadge}>
+                  <Text style={styles.syncBadgeText}>✓</Text>
+                </View>
+              )}
             </View>
-            {task.synced && <Text style={styles.syncBadge}>✓</Text>}
-          </View>
+          </LinearGradient>
         </Animated.View>
       </GestureDetector>
     </View>
@@ -148,7 +159,6 @@ export function Timeline({
   const internalRef = useRef<ScrollView>(null);
   const ref = scrollViewRef || internalRef;
 
-  // 現在時刻付近にスクロール
   useEffect(() => {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -158,7 +168,6 @@ export function Timeline({
     }, 300);
   }, []);
 
-  // 現在時刻のインジケーター位置
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const nowY = minutesToYPosition(nowMinutes);
@@ -168,13 +177,14 @@ export function Timeline({
       ref={ref as any}
       style={styles.container}
       contentContainerStyle={{ height: totalHeight }}
-      showsVerticalScrollIndicator={true}
+      showsVerticalScrollIndicator={false}
       onScroll={onScroll}
       scrollEventThrottle={16}
     >
       {/* 時間ラベル + 線 */}
       {timeSlots.map(slot => {
         const y = minutesToYPosition(slot.hour * 60);
+        const isWholeHour = true;
         return (
           <Pressable
             key={slot.label}
@@ -191,9 +201,10 @@ export function Timeline({
       <View style={[styles.nowIndicator, { top: nowY }]}>
         <View style={styles.nowDot} />
         <View style={styles.nowLine} />
+        <View style={styles.nowGlow} />
       </View>
 
-      {/* 配置済みタスク（スワイプ削除対応） */}
+      {/* 配置済みタスク */}
       {tasks.map(task => {
         const startMinutes = timeToMinutes(task.startTime);
         const taskY = minutesToYPosition(startMinutes);
@@ -229,21 +240,23 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   timeLabel: {
-    width: 50,
-    fontSize: 12,
+    width: 48,
+    fontSize: 11,
+    fontWeight: '500',
     color: COLORS.textMuted,
     textAlign: 'right',
     paddingRight: 8,
     marginTop: -7,
+    fontVariant: ['tabular-nums'],
   },
   timeLine: {
     flex: 1,
-    height: 1,
+    height: StyleSheet.hairlineWidth,
     backgroundColor: COLORS.timelineLine,
   },
   nowIndicator: {
     position: 'absolute',
-    left: 44,
+    left: 40,
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
@@ -254,16 +267,31 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: COLORS.danger,
+    shadowColor: COLORS.danger,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    zIndex: 2,
   },
   nowLine: {
     flex: 1,
-    height: 2,
+    height: 1.5,
     backgroundColor: COLORS.danger,
+    zIndex: 2,
+  },
+  nowGlow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 8,
+    top: -3,
+    backgroundColor: COLORS.dangerGlow,
+    zIndex: 1,
   },
   taskBlockWrapper: {
     position: 'absolute',
     overflow: 'hidden',
-    borderRadius: 10,
+    borderRadius: 14,
     zIndex: 10,
   },
   deleteHint: {
@@ -272,22 +300,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'flex-end',
     paddingRight: 16,
-    borderRadius: 10,
+    borderRadius: 14,
   },
   deleteHintText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
     color: '#fff',
+    letterSpacing: 0.3,
   },
   taskBlock: {
-    borderRadius: 10,
-    padding: 8,
-    // 付箋っぽい影
+    borderRadius: 14,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowRadius: 6,
+    elevation: 6,
+    overflow: 'hidden',
+  },
+  taskBlockGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    padding: 10,
+    paddingLeft: 0,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  taskLeftBorder: {
+    width: 4,
+    height: '100%',
+    borderTopLeftRadius: 14,
+    borderBottomLeftRadius: 14,
+    marginRight: 10,
   },
   taskContent: {
     flexDirection: 'row',
@@ -296,24 +339,34 @@ const styles = StyleSheet.create({
   },
   taskIcon: {
     fontSize: 18,
-    marginRight: 6,
+    marginRight: 8,
   },
   taskInfo: {
     flex: 1,
   },
   taskTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#1a1a2e',
+    fontWeight: '800',
+    color: 'rgba(0,0,0,0.75)',
+    letterSpacing: 0.3,
   },
   taskTime: {
     fontSize: 11,
-    color: 'rgba(26,26,46,0.6)',
+    fontWeight: '600',
+    color: 'rgba(0,0,0,0.45)',
     marginTop: 1,
   },
   syncBadge: {
-    fontSize: 14,
-    color: '#1a5e1a',
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  syncBadgeText: {
+    fontSize: 12,
+    color: 'rgba(0,0,0,0.6)',
     fontWeight: 'bold',
   },
 });
