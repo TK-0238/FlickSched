@@ -63,8 +63,8 @@ export default function SettingsScreen() {
   const toggleGoogleCalendar = async (value: boolean) => {
     if (value) {
       Alert.alert(
-        'Google Calendar',
-        'Google Calendar連携は開発者設定（OAuth クライアントID）が必要です。\n\n設定後にこの機能が利用可能になります。',
+        'Googleカレンダー',
+        'Googleカレンダー連携にはOAuthクライアントIDの設定が必要です。\n\n設定後にこの機能が利用可能になります。',
         [{ text: 'OK' }]
       );
       return;
@@ -82,8 +82,8 @@ export default function SettingsScreen() {
 
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>Apple Calendar</Text>
-            <Text style={styles.settingHint}>デバイスのカレンダーに予定を追加</Text>
+            <Text style={styles.settingLabel}>Appleカレンダー</Text>
+            <Text style={styles.settingHint}>端末のカレンダーに予定を追加</Text>
           </View>
           <Switch
             value={settings.appleCalendarEnabled}
@@ -95,7 +95,7 @@ export default function SettingsScreen() {
 
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>Google Calendar</Text>
+            <Text style={styles.settingLabel}>Googleカレンダー</Text>
             <Text style={styles.settingHint}>Googleアカウントのカレンダーに追加</Text>
           </View>
           <Switch

@@ -51,7 +51,7 @@ export function TaskActionModal({
             <View style={styles.actionInfo}>
               <Text style={styles.actionText}>カレンダーに追加</Text>
               <Text style={styles.actionHint}>
-                {task.synced ? '✓ 同期済み' : 'Apple / Google カレンダー'}
+                {task.synced ? '✓ 同期済み' : 'Apple / Googleカレンダーに追加'}
               </Text>
             </View>
           </Pressable>

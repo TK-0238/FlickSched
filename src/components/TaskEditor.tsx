@@ -129,7 +129,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
                   styles.durationText,
                   duration === d && { color: '#1a1a2e' },
                 ]}>
-                  {d >= 60 ? `${d / 60}h` : `${d}m`}
+                  {d >= 60 ? `${d / 60}時間` : `${d}分`}
                 </Text>
               </Pressable>
             ))}
