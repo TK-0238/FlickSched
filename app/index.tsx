@@ -247,25 +247,12 @@ export default function HomeScreen() {
     setToast({ visible: true, message: `「${task.title}」を削除しました`, type: 'info' });
   }, [removeTask]);
 
-  // --- 配置済みタスク長押し → 削除確認 ---
+  // --- 配置済みタスク長押し → 詳細モーダル表示 ---
   const handleScheduledTaskLongPress = useCallback((task: ScheduledTask) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    Alert.alert(
-      '予定の削除',
-      `「${task.title}」を削除しますか？`,
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        {
-          text: '削除',
-          style: 'destructive',
-          onPress: async () => {
-            await removeTask(task.id);
-            setToast({ visible: true, message: '予定を削除しました', type: 'info' });
-          },
-        },
-      ]
-    );
-  }, [removeTask]);
+    setSelectedScheduledTask(task);
+    setActionModalVisible(true);
+  }, []);
 
   // --- カレンダー同期（Apple + Google対応）---
   const handleSyncCalendar = useCallback(async (task: ScheduledTask) => {
