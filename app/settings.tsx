@@ -128,9 +128,10 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>💡 使い方</Text>
         <View style={styles.helpCard}>
           <Text style={styles.helpItem}>👆 <Text style={styles.helpBold}>タップ</Text> → 空き時間に自動追加</Text>
+          <Text style={styles.helpItem}>🖐️ <Text style={styles.helpBold}>長押し+ドラッグ</Text> → 好きな時間に配置</Text>
           <Text style={styles.helpItem}>👆 <Text style={styles.helpBold}>長押し</Text> → 付箋を編集</Text>
-          <Text style={styles.helpItem}>📅 配置済みの予定をタップ → カレンダーに同期</Text>
-          <Text style={styles.helpItem}>🗑️ 配置済みの予定を長押し → 削除</Text>
+          <Text style={styles.helpItem}>👈 <Text style={styles.helpBold}>左スワイプ</Text> → 予定を削除</Text>
+          <Text style={styles.helpItem}>📅 ヘッダーの同期ボタン → カレンダーに一括登録</Text>
         </View>
 
         {/* アプリ情報 */}

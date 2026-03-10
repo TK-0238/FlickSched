@@ -29,6 +29,7 @@ export default function RootLayout() {
           options={{
             title: '設定',
             presentation: 'modal',
+            headerBackTitle: '戻る',
           }}
         />
       </Stack>
