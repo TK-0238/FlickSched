@@ -70,5 +70,16 @@ export function useTasks() {
     await saveTasks(updated);
   }, [tasks, saveTasks]);
 
-  return { tasks, loading, addTask, updateTask, deleteTask, reload: loadTasks };
+  // タスク並び替え（左右移動）
+  const reorderTask = useCallback(async (id: string, direction: 'left' | 'right') => {
+    const index = tasks.findIndex(t => t.id === id);
+    if (index === -1) return;
+    const newIndex = direction === 'left' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= tasks.length) return;
+    const updated = [...tasks];
+    [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+    await saveTasks(updated);
+  }, [tasks, saveTasks]);
+
+  return { tasks, loading, addTask, updateTask, deleteTask, reorderTask, reload: loadTasks };
 }

@@ -43,7 +43,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { tasks, addTask, updateTask, deleteTask } = useTasks();
+  const { tasks, addTask, updateTask, deleteTask, reorderTask } = useTasks();
   const {
     todayTasks,
     selectedDate,
@@ -452,6 +452,7 @@ export default function HomeScreen() {
           onDragStart={handleDragStart}
           onDragMove={handleDragMove}
           onDragEnd={handleDragEnd}
+          onReorder={reorderTask}
         />
 
         {/* ドラッグ中の時刻プレビュー */}
