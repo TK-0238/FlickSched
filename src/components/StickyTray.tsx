@@ -1,6 +1,7 @@
 // 付箋トレイ — 画面下部の付箋一覧（横スクロール、ドラッグ対応）
 import React from 'react';
-import { StyleSheet, View, ScrollView, Text, Pressable } from 'react-native';
+import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { StickyNote } from './StickyNote';
 import { COLORS } from '../constants';
 import type { TaskTemplate } from '../types';
@@ -27,13 +28,15 @@ export function StickyTray({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.label}>📌 タスク付箋</Text>
+        <Text style={styles.label}>📌 タスク付箋 ({tasks.length})</Text>
         <Text style={styles.hint}>タップ or ドラッグで予定に追加</Text>
       </View>
       <ScrollView
         horizontal
-        showsHorizontalScrollIndicator={false}
+        showsHorizontalScrollIndicator={true}
         contentContainerStyle={styles.scrollContent}
+        bounces={true}
+        nestedScrollEnabled={true}
       >
         {tasks.map(task => (
           <StickyNote
@@ -88,6 +91,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 10,
+    paddingRight: 30,
     alignItems: 'center',
   },
   addButton: {
