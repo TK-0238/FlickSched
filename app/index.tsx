@@ -1,5 +1,5 @@
 // メインホーム画面 — タイムライン + 付箋トレイ + ドラッグ配置
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -17,6 +17,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { COLORS, TIMELINE } from '../src/constants';
 import { useTasks } from '../src/hooks/useTasks';
@@ -32,6 +33,7 @@ import { TaskEditor } from '../src/components/TaskEditor';
 import { TaskActionModal } from '../src/components/TaskActionModal';
 import { FlyAnimation } from '../src/components/FlyAnimation';
 import { Toast } from '../src/components/Toast';
+import { Onboarding } from '../src/components/Onboarding';
 
 import type { TaskTemplate, ScheduledTask } from '../src/types';
 
@@ -75,6 +77,24 @@ export default function HomeScreen() {
 
   // トースト状態
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as const });
+
+  // オンボーディング状態
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // 初回起動チェック
+  useEffect(() => {
+    (async () => {
+      const seen = await AsyncStorage.getItem('@flicksched/onboarding_seen');
+      if (!seen) {
+        setShowOnboarding(true);
+      }
+    })();
+  }, []);
+
+  const handleCloseOnboarding = useCallback(async () => {
+    setShowOnboarding(false);
+    await AsyncStorage.setItem('@flicksched/onboarding_seen', 'true');
+  }, []);
 
   // ドラッグプレビュー状態
   const [dragPreview, setDragPreview] = useState<{
@@ -335,8 +355,9 @@ export default function HomeScreen() {
           <Pressable
             onPress={() => router.push('/settings')}
             style={styles.settingsBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.settingsIcon}>⚙️</Text>
+            <Text style={styles.settingsBtnText}>設定</Text>
           </Pressable>
           <Text style={styles.appTitle}>⚡ フリスケ</Text>
           <View style={styles.headerRight}>
@@ -443,6 +464,12 @@ export default function HomeScreen() {
           }}
           onClose={() => setActionModalVisible(false)}
         />
+
+        {/* 初回起動時オンボーディング */}
+        <Onboarding
+          visible={showOnboarding}
+          onClose={handleCloseOnboarding}
+        />
       </View>
     </SafeAreaView>
   );
@@ -487,11 +514,15 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
   settingsBtn: {
-    padding: 8,
-    marginRight: 4,
+    backgroundColor: 'rgba(78,205,196,0.15)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
-  settingsIcon: {
-    fontSize: 24,
+  settingsBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
   timelineWrapper: {
     flex: 1,

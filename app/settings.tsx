@@ -124,16 +124,6 @@ export default function SettingsScreen() {
           </>
         )}
 
-        {/* 使い方 */}
-        <Text style={styles.sectionTitle}>💡 使い方</Text>
-        <View style={styles.helpCard}>
-          <Text style={styles.helpItem}>👆 <Text style={styles.helpBold}>タップ</Text> → 空き時間に自動追加</Text>
-          <Text style={styles.helpItem}>🖐️ <Text style={styles.helpBold}>長押し+ドラッグ</Text> → 好きな時間に配置</Text>
-          <Text style={styles.helpItem}>👆 <Text style={styles.helpBold}>長押し</Text> → 付箋を編集</Text>
-          <Text style={styles.helpItem}>👈 <Text style={styles.helpBold}>左スワイプ</Text> → 予定を削除</Text>
-          <Text style={styles.helpItem}>📅 ヘッダーの同期ボタン → カレンダーに一括登録</Text>
-        </View>
-
         {/* アプリ情報 */}
         <Text style={styles.sectionTitle}>ℹ️ アプリ情報</Text>
         <View style={styles.infoCard}>
@@ -215,21 +205,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textMuted,
     marginTop: 2,
-  },
-  helpCard: {
-    backgroundColor: COLORS.surface,
-    padding: 16,
-    borderRadius: 12,
-    gap: 12,
-  },
-  helpItem: {
-    fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 22,
-  },
-  helpBold: {
-    fontWeight: '700',
-    color: COLORS.primary,
   },
   infoCard: {
     backgroundColor: COLORS.surface,
