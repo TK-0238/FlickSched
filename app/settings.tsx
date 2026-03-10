@@ -5,9 +5,9 @@ import {
   View,
   Text,
   Pressable,
-  Switch,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -27,6 +27,7 @@ export default function SettingsScreen() {
     googleCalendarEnabled: false,
   });
   const [calendars, setCalendars] = useState<any[]>([]);
+  const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -35,43 +36,55 @@ export default function SettingsScreen() {
   const loadSettings = async () => {
     const s = await loadCalendarSettings();
     setSettings(s);
-    // カレンダー一覧も取得
-    try {
-      const granted = await requestCalendarPermission();
-      if (granted) {
+    if (s.appleCalendarEnabled) {
+      // 接続済みならカレンダー一覧を取得
+      try {
         const cals = await getAvailableCalendars();
         setCalendars(cals);
+      } catch (e) {
+        // 権限なし
       }
-    } catch (e) {
-      // 権限なし
     }
   };
 
-  const toggleAppleCalendar = async (value: boolean) => {
-    if (value) {
-      const granted = await requestCalendarPermission();
-      if (!granted) {
-        Alert.alert('権限エラー', '設定からカレンダーへのアクセスを許可してください');
-        return;
-      }
-    }
-    const updated = { ...settings, appleCalendarEnabled: value };
-    setSettings(updated);
-    await saveCalendarSettings(updated);
-  };
-
-  const toggleGoogleCalendar = async (value: boolean) => {
-    if (value) {
-      Alert.alert(
-        'Googleカレンダー',
-        'Googleカレンダー連携にはOAuthクライアントIDの設定が必要です。\n\n設定後にこの機能が利用可能になります。',
-        [{ text: 'OK' }]
-      );
+  // Appleカレンダー接続/切断
+  const handleAppleCalendarConnect = async () => {
+    if (settings.appleCalendarEnabled) {
+      // 切断
+      const updated = { ...settings, appleCalendarEnabled: false };
+      setSettings(updated);
+      setCalendars([]);
+      await saveCalendarSettings(updated);
       return;
     }
-    const updated = { ...settings, googleCalendarEnabled: value };
-    setSettings(updated);
-    await saveCalendarSettings(updated);
+
+    // 接続
+    setConnecting(true);
+    try {
+      const granted = await requestCalendarPermission();
+      if (!granted) {
+        Alert.alert('権限エラー', '設定アプリからカレンダーへのアクセスを許可してください');
+        setConnecting(false);
+        return;
+      }
+      const cals = await getAvailableCalendars();
+      setCalendars(cals);
+      const updated = { ...settings, appleCalendarEnabled: true };
+      setSettings(updated);
+      await saveCalendarSettings(updated);
+    } catch (e) {
+      Alert.alert('エラー', 'カレンダーへの接続に失敗しました');
+    }
+    setConnecting(false);
+  };
+
+  // Googleカレンダー（未実装）
+  const handleGoogleCalendarConnect = () => {
+    Alert.alert(
+      'Googleカレンダー',
+      'Googleカレンダー連携は今後のアップデートで対応予定です。',
+      [{ text: 'OK' }]
+    );
   };
 
   return (
@@ -80,33 +93,63 @@ export default function SettingsScreen() {
         {/* カレンダー連携 */}
         <Text style={styles.sectionTitle}>📅 カレンダー連携</Text>
 
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>Appleカレンダー</Text>
-            <Text style={styles.settingHint}>端末のカレンダーに予定を追加</Text>
+        {/* Appleカレンダー */}
+        <View style={styles.calendarCard}>
+          <View style={styles.calendarCardHeader}>
+            <Text style={styles.calendarIcon}>🍎</Text>
+            <View style={styles.calendarCardInfo}>
+              <Text style={styles.calendarCardTitle}>Appleカレンダー</Text>
+              <Text style={styles.calendarCardHint}>
+                {settings.appleCalendarEnabled
+                  ? `✅ 接続済み（${calendars.length}件のカレンダー）`
+                  : '端末のカレンダーに予定を追加'}
+              </Text>
+            </View>
           </View>
-          <Switch
-            value={settings.appleCalendarEnabled}
-            onValueChange={toggleAppleCalendar}
-            trackColor={{ false: COLORS.border, true: COLORS.primary }}
-            thumbColor="#fff"
-          />
+          <Pressable
+            onPress={handleAppleCalendarConnect}
+            disabled={connecting}
+            style={({ pressed }) => [
+              styles.connectBtn,
+              settings.appleCalendarEnabled && styles.disconnectBtn,
+              pressed && styles.btnPressed,
+            ]}
+          >
+            {connecting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={[
+                styles.connectBtnText,
+                settings.appleCalendarEnabled && styles.disconnectBtnText,
+              ]}>
+                {settings.appleCalendarEnabled ? '切断する' : '接続する'}
+              </Text>
+            )}
+          </Pressable>
         </View>
 
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>Googleカレンダー</Text>
-            <Text style={styles.settingHint}>Googleアカウントのカレンダーに追加</Text>
+        {/* Googleカレンダー */}
+        <View style={styles.calendarCard}>
+          <View style={styles.calendarCardHeader}>
+            <Text style={styles.calendarIcon}>📆</Text>
+            <View style={styles.calendarCardInfo}>
+              <Text style={styles.calendarCardTitle}>Googleカレンダー</Text>
+              <Text style={styles.calendarCardHint}>今後対応予定</Text>
+            </View>
           </View>
-          <Switch
-            value={settings.googleCalendarEnabled}
-            onValueChange={toggleGoogleCalendar}
-            trackColor={{ false: COLORS.border, true: COLORS.primary }}
-            thumbColor="#fff"
-          />
+          <Pressable
+            onPress={handleGoogleCalendarConnect}
+            style={({ pressed }) => [
+              styles.connectBtn,
+              styles.comingSoonBtn,
+              pressed && styles.btnPressed,
+            ]}
+          >
+            <Text style={[styles.connectBtnText, styles.comingSoonText]}>準備中</Text>
+          </Pressable>
         </View>
 
-        {/* 利用可能なカレンダー一覧 */}
+        {/* 接続済みカレンダー一覧 */}
         {calendars.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>📋 検出されたカレンダー</Text>
@@ -156,29 +199,63 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 12,
   },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  // カレンダーカード
+  calendarCard: {
     backgroundColor: COLORS.surface,
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
+    borderRadius: 14,
+    marginBottom: 10,
   },
-  settingInfo: {
+  calendarCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  calendarIcon: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  calendarCardInfo: {
     flex: 1,
-    marginRight: 16,
   },
-  settingLabel: {
+  calendarCardTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.text,
   },
-  settingHint: {
+  calendarCardHint: {
     fontSize: 12,
     color: COLORS.textMuted,
-    marginTop: 4,
+    marginTop: 3,
   },
+  // 接続ボタン
+  connectBtn: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  connectBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.background,
+  },
+  disconnectBtn: {
+    backgroundColor: 'rgba(255,107,107,0.15)',
+  },
+  disconnectBtnText: {
+    color: '#FF6B6B',
+  },
+  comingSoonBtn: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  comingSoonText: {
+    color: COLORS.textMuted,
+  },
+  btnPressed: {
+    opacity: 0.7,
+  },
+  // カレンダー一覧
   calendarItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -206,6 +283,7 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 2,
   },
+  // アプリ情報
   infoCard: {
     backgroundColor: COLORS.surface,
     padding: 16,
