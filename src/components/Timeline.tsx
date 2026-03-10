@@ -1,4 +1,4 @@
-// タイムライン — 0〜24時の縦スクロール + 配置済みタスク表示
+// タイムライン — 0〜24時の縦スクロール + 配置済みタスク表示 + スワイプ削除
 import React, { useRef, useEffect } from 'react';
 import {
   StyleSheet,
@@ -8,6 +8,14 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 import { COLORS, TIMELINE } from '../constants';
 import { generateTimeSlots, minutesToYPosition, timeToMinutes } from '../utils/time';
 import type { ScheduledTask } from '../types';
@@ -19,8 +27,111 @@ interface Props {
   onTaskPress: (task: ScheduledTask) => void;
   onTaskLongPress: (task: ScheduledTask) => void;
   onTimeSlotPress: (minutes: number) => void;
+  onSwipeDelete?: (task: ScheduledTask) => void;
   scrollViewRef?: React.RefObject<ScrollView>;
   onScroll?: (event: any) => void;
+}
+
+// スワイプ削除可能なタスクブロック
+function SwipeableTaskBlock({
+  task,
+  taskY,
+  taskHeight,
+  onPress,
+  onLongPress,
+  onSwipeDelete,
+}: {
+  task: ScheduledTask;
+  taskY: number;
+  taskHeight: number;
+  onPress: () => void;
+  onLongPress: () => void;
+  onSwipeDelete?: (task: ScheduledTask) => void;
+}) {
+  const translateX = useSharedValue(0);
+  const deleteOpacity = useSharedValue(0);
+
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-15, 15])
+    .failOffsetY([-5, 5])
+    .onUpdate((e) => {
+      // 左方向のみ許可
+      if (e.translationX < 0) {
+        translateX.value = Math.max(e.translationX, -120);
+        deleteOpacity.value = Math.min(Math.abs(e.translationX) / 80, 1);
+      }
+    })
+    .onEnd((e) => {
+      if (e.translationX < -80 && onSwipeDelete) {
+        // 十分にスワイプしたら削除
+        translateX.value = withTiming(-400, { duration: 200 });
+        runOnJS(onSwipeDelete)(task);
+      } else {
+        // 元に戻す
+        translateX.value = withSpring(0, { damping: 15 });
+        deleteOpacity.value = withTiming(0, { duration: 150 });
+      }
+    });
+
+  const tapGesture = Gesture.Tap().onEnd(() => {
+    runOnJS(onPress)();
+  });
+
+  const longPressGesture = Gesture.LongPress()
+    .minDuration(500)
+    .onStart(() => {
+      runOnJS(onLongPress)();
+    });
+
+  const composedGesture = Gesture.Race(
+    panGesture,
+    Gesture.Exclusive(longPressGesture, tapGesture)
+  );
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const deleteHintStyle = useAnimatedStyle(() => ({
+    opacity: deleteOpacity.value,
+  }));
+
+  return (
+    <View
+      style={[
+        styles.taskBlockWrapper,
+        { top: taskY + 1, height: Math.max(taskHeight - 2, 28), left: 60, right: 12 },
+      ]}
+    >
+      {/* 削除ヒント（赤い背景） */}
+      <Animated.View style={[styles.deleteHint, deleteHintStyle]}>
+        <Text style={styles.deleteHintText}>🗑 削除</Text>
+      </Animated.View>
+
+      <GestureDetector gesture={composedGesture}>
+        <Animated.View
+          style={[
+            styles.taskBlock,
+            { backgroundColor: task.color, height: '100%' },
+            animatedStyle,
+          ]}
+        >
+          <View style={styles.taskContent}>
+            <Text style={styles.taskIcon}>{task.icon}</Text>
+            <View style={styles.taskInfo}>
+              <Text style={styles.taskTitle} numberOfLines={1}>
+                {task.title}
+              </Text>
+              <Text style={styles.taskTime}>
+                {task.startTime} - {task.endTime}
+              </Text>
+            </View>
+            {task.synced && <Text style={styles.syncBadge}>✓</Text>}
+          </View>
+        </Animated.View>
+      </GestureDetector>
+    </View>
+  );
 }
 
 export function Timeline({
@@ -28,6 +139,7 @@ export function Timeline({
   onTaskPress,
   onTaskLongPress,
   onTimeSlotPress,
+  onSwipeDelete,
   scrollViewRef,
   onScroll,
 }: Props) {
@@ -81,41 +193,22 @@ export function Timeline({
         <View style={styles.nowLine} />
       </View>
 
-      {/* 配置済みタスク（付箋） */}
+      {/* 配置済みタスク（スワイプ削除対応） */}
       {tasks.map(task => {
         const startMinutes = timeToMinutes(task.startTime);
         const taskY = minutesToYPosition(startMinutes);
         const taskHeight = (task.duration / 60) * TIMELINE.HOUR_HEIGHT;
 
         return (
-          <Pressable
+          <SwipeableTaskBlock
             key={task.id}
+            task={task}
+            taskY={taskY}
+            taskHeight={taskHeight}
             onPress={() => onTaskPress(task)}
             onLongPress={() => onTaskLongPress(task)}
-            style={[
-              styles.taskBlock,
-              {
-                top: taskY + 1,
-                height: Math.max(taskHeight - 2, 28),
-                backgroundColor: task.color,
-                left: 60,
-                right: 12,
-              },
-            ]}
-          >
-            <View style={styles.taskContent}>
-              <Text style={styles.taskIcon}>{task.icon}</Text>
-              <View style={styles.taskInfo}>
-                <Text style={styles.taskTitle} numberOfLines={1}>
-                  {task.title}
-                </Text>
-                <Text style={styles.taskTime}>
-                  {task.startTime} - {task.endTime}
-                </Text>
-              </View>
-              {task.synced && <Text style={styles.syncBadge}>✓</Text>}
-            </View>
-          </Pressable>
+            onSwipeDelete={onSwipeDelete}
+          />
         );
       })}
     </ScrollView>
@@ -167,8 +260,26 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: COLORS.danger,
   },
-  taskBlock: {
+  taskBlockWrapper: {
     position: 'absolute',
+    overflow: 'hidden',
+    borderRadius: 10,
+    zIndex: 10,
+  },
+  deleteHint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.danger,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingRight: 16,
+    borderRadius: 10,
+  },
+  deleteHintText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  taskBlock: {
     borderRadius: 10,
     padding: 8,
     // 付箋っぽい影
@@ -177,7 +288,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
-    zIndex: 10,
   },
   taskContent: {
     flexDirection: 'row',

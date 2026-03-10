@@ -21,7 +21,7 @@ import { useRouter } from 'expo-router';
 import { COLORS, TIMELINE } from '../src/constants';
 import { useTasks } from '../src/hooks/useTasks';
 import { useSchedule } from '../src/hooks/useSchedule';
-import { minutesToYPosition, minutesToTime, yPositionToMinutes } from '../src/utils/time';
+import { minutesToYPosition, minutesToTime, yPositionToMinutes, hasConflict } from '../src/utils/time';
 import { addToAppleCalendar } from '../src/utils/calendar';
 
 // コンポーネント
@@ -120,10 +120,8 @@ export default function HomeScreen() {
     });
     setFlyVisible(true);
     setTimeout(() => {
-      scrollViewRef.current?.scrollTo({
-        y: Math.max(0, targetY - 100),
-        animated: true,
-      });
+      scrollToTime(parseInt(scheduled.startTime.split(':')[0]) * 60 +
+        parseInt(scheduled.startTime.split(':')[1]));
     }, 300);
     setToast({
       visible: true,
@@ -164,17 +162,36 @@ export default function HomeScreen() {
 
     const result = calcTimeFromDragY(absoluteY);
     if (result && absoluteY < timelineTopRef.current + SCREEN_HEIGHT * 0.6) {
-      // タイムライン領域内にドロップされた
+      // 重複チェック
+      const conflict = hasConflict(result.timeStr, template.duration, todayTasks, selectedDate);
+      if (conflict) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert(
+          '⚠️ 時間が重複しています',
+          `${result.timeStr}には「${conflict.title}」(${conflict.startTime}〜${conflict.endTime})が入っています。\n上書きして配置しますか？`,
+          [
+            { text: 'キャンセル', style: 'cancel' },
+            {
+              text: '配置する',
+              onPress: async () => {
+                const scheduled = await scheduleTaskAt(template, result.timeStr);
+                scrollToTime(result.minutes);
+                setToast({
+                  visible: true,
+                  message: `${template.icon} ${template.title} → ${result.timeStr}に配置！`,
+                  type: 'success',
+                });
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      // 重複なし → そのまま配置
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const scheduled = await scheduleTaskAt(template, result.timeStr);
-      // タイムラインを該当位置にスクロール
-      const targetY = minutesToYPosition(result.minutes);
-      setTimeout(() => {
-        scrollViewRef.current?.scrollTo({
-          y: Math.max(0, targetY - 100),
-          animated: true,
-        });
-      }, 200);
+      scrollToTime(result.minutes);
       setToast({
         visible: true,
         message: `${template.icon} ${template.title} → ${result.timeStr}に配置！`,
@@ -182,7 +199,7 @@ export default function HomeScreen() {
       });
     }
     // タイムライン外にドロップした場合は何もしない（付箋が元の位置に戻る）
-  }, [calcTimeFromDragY, scheduleTaskAt]);
+  }, [calcTimeFromDragY, scheduleTaskAt, todayTasks, selectedDate]);
 
   // --- 新規タスク作成 ---
   const handleAddNew = useCallback(() => {
@@ -260,6 +277,51 @@ export default function HomeScreen() {
     // 将来: 空き時間タップから直接タスクを追加
   }, []);
 
+  // --- タイムラインの指定分位置にスクロール ---
+  const scrollToTime = useCallback((minutes: number) => {
+    const targetY = minutesToYPosition(minutes);
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: Math.max(0, targetY - 100),
+        animated: true,
+      });
+    }, 200);
+  }, []);
+
+  // --- 左スワイプ削除 ---
+  const handleSwipeDelete = useCallback(async (task: ScheduledTask) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await removeTask(task.id);
+    setToast({ visible: true, message: `${task.icon} ${task.title} を削除しました`, type: 'info' });
+  }, [removeTask]);
+
+  // --- 一括カレンダー同期 ---
+  const handleSyncAll = useCallback(async () => {
+    const unsyncedTasks = todayTasks.filter(t => !t.synced);
+    if (unsyncedTasks.length === 0) {
+      setToast({ visible: true, message: '同期するタスクがありません', type: 'info' });
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    let successCount = 0;
+    for (const task of unsyncedTasks) {
+      try {
+        const eventId = await addToAppleCalendar(task);
+        if (eventId) {
+          await markSynced(task.id, eventId);
+          successCount++;
+        }
+      } catch (e) {
+        console.error('同期エラー:', e);
+      }
+    }
+    setToast({
+      visible: true,
+      message: `📅 ${successCount}件をカレンダーに同期しました！`,
+      type: successCount > 0 ? 'success' : 'error',
+    });
+  }, [todayTasks, markSynced]);
+
   // ドラッグプレビューのアニメーションスタイル
   const dragPreviewStyle = useAnimatedStyle(() => ({
     opacity: dragPreviewOpacity.value,
@@ -271,12 +333,24 @@ export default function HomeScreen() {
         {/* ヘッダー */}
         <View style={styles.header}>
           <Text style={styles.appTitle}>⚡ FlickSched</Text>
-          <Pressable
-            onPress={() => router.push('/settings')}
-            style={styles.settingsBtn}
-          >
-            <Text style={styles.settingsIcon}>⚙️</Text>
-          </Pressable>
+          <View style={styles.headerRight}>
+            {/* 未同期タスク数バッジ */}
+            {todayTasks.length > 0 && (
+              <Pressable onPress={handleSyncAll} style={styles.syncAllBtn}>
+                <Text style={styles.syncAllText}>
+                  📅 {todayTasks.filter(t => !t.synced).length > 0
+                    ? `${todayTasks.filter(t => !t.synced).length}件同期`
+                    : '✓ 同期済'}
+                </Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => router.push('/settings')}
+              style={styles.settingsBtn}
+            >
+              <Text style={styles.settingsIcon}>⚙️</Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* 日付ナビゲーション */}
@@ -295,6 +369,7 @@ export default function HomeScreen() {
             onTaskPress={handleScheduledTaskPress}
             onTaskLongPress={handleScheduledTaskLongPress}
             onTimeSlotPress={handleTimeSlotPress}
+            onSwipeDelete={handleSwipeDelete}
             scrollViewRef={scrollViewRef}
             onScroll={handleTimelineScroll}
           />
@@ -393,6 +468,22 @@ const styles = StyleSheet.create({
   appTitle: {
     fontSize: 22,
     fontWeight: '800',
+    color: COLORS.primary,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  syncAllBtn: {
+    backgroundColor: 'rgba(78,205,196,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  syncAllText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: COLORS.primary,
   },
   settingsBtn: {

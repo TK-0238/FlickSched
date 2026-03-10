@@ -109,6 +109,25 @@ export function findNextAvailableSlot(
   return preferredStartTime || '09:00';
 }
 
+// 時間の重複チェック
+export function hasConflict(
+  startTime: string,
+  duration: number,
+  scheduled: ScheduledTask[],
+  date: string,
+  excludeId?: string
+): ScheduledTask | null {
+  const startMin = timeToMinutes(startTime);
+  const endMin = startMin + duration;
+  return scheduled.find(task => {
+    if (task.date !== date) return false;
+    if (excludeId && task.id === excludeId) return false;
+    const taskStart = timeToMinutes(task.startTime);
+    const taskEnd = timeToMinutes(task.endTime);
+    return startMin < taskEnd && endMin > taskStart;
+  }) || null;
+}
+
 // UUIDの簡易生成
 export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
