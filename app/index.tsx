@@ -23,7 +23,7 @@ import { COLORS, TIMELINE } from '../src/constants';
 import { useTasks } from '../src/hooks/useTasks';
 import { useSchedule } from '../src/hooks/useSchedule';
 import { minutesToYPosition, minutesToTime, yPositionToMinutes, hasConflict } from '../src/utils/time';
-import { addToAppleCalendar } from '../src/utils/calendar';
+import { addToAppleCalendar, addToGoogleCalendar, loadCalendarSettings } from '../src/utils/calendar';
 
 // コンポーネント
 import { Timeline } from '../src/components/Timeline';
@@ -265,16 +265,41 @@ export default function HomeScreen() {
     );
   }, [removeTask]);
 
-  // --- カレンダー同期 ---
+  // --- カレンダー同期（Apple + Google対応）---
   const handleSyncCalendar = useCallback(async (task: ScheduledTask) => {
     try {
-      const eventId = await addToAppleCalendar(task);
-      if (eventId) {
-        await markSynced(task.id, eventId);
+      const calSettings = await loadCalendarSettings();
+      let synced = false;
+
+      // Appleカレンダー
+      if (calSettings.appleCalendarEnabled) {
+        const eventId = await addToAppleCalendar(task);
+        if (eventId) {
+          await markSynced(task.id, eventId);
+          synced = true;
+        }
+      }
+
+      // Googleカレンダー
+      if (calSettings.googleCalendarEnabled && calSettings.googleAccessToken) {
+        const eventId = await addToGoogleCalendar(task);
+        if (eventId) {
+          await markSynced(task.id, eventId);
+          synced = true;
+        }
+      }
+
+      if (synced) {
         setToast({
           visible: true,
           message: `📅 カレンダーに追加しました！`,
           type: 'success',
+        });
+      } else if (!calSettings.appleCalendarEnabled && !calSettings.googleCalendarEnabled) {
+        setToast({
+          visible: true,
+          message: '設定からカレンダーを接続してください',
+          type: 'error',
         });
       } else {
         setToast({
@@ -315,18 +340,34 @@ export default function HomeScreen() {
     setToast({ visible: true, message: `${task.icon} ${task.title} を削除しました`, type: 'info' });
   }, [removeTask]);
 
-  // --- 一括カレンダー同期 ---
+  // --- 一括カレンダー同期（Apple + Google両対応）---
   const handleSyncAll = useCallback(async () => {
     const unsyncedTasks = todayTasks.filter(t => !t.synced);
     if (unsyncedTasks.length === 0) {
       setToast({ visible: true, message: '同期するタスクがありません', type: 'info' });
       return;
     }
+
+    const calSettings = await loadCalendarSettings();
+    if (!calSettings.appleCalendarEnabled && !calSettings.googleCalendarEnabled) {
+      setToast({ visible: true, message: '設定からカレンダーを接続してください', type: 'error' });
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     let successCount = 0;
     for (const task of unsyncedTasks) {
       try {
-        const eventId = await addToAppleCalendar(task);
+        let eventId: string | null = null;
+
+        if (calSettings.appleCalendarEnabled) {
+          eventId = await addToAppleCalendar(task);
+        }
+        if (calSettings.googleCalendarEnabled && calSettings.googleAccessToken) {
+          const gEventId = await addToGoogleCalendar(task);
+          if (gEventId) eventId = gEventId;
+        }
+
         if (eventId) {
           await markSynced(task.id, eventId);
           successCount++;

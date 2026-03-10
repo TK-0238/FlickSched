@@ -11,14 +11,25 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import { COLORS } from '../src/constants';
 import {
   requestCalendarPermission,
   getAvailableCalendars,
   loadCalendarSettings,
   saveCalendarSettings,
+  saveGoogleToken,
+  disconnectGoogle,
+  GOOGLE_CLIENT_ID,
+  GOOGLE_AUTH_URL,
+  GOOGLE_TOKEN_URL,
+  GOOGLE_SCOPES,
 } from '../src/utils/calendar';
 import type { CalendarSettings } from '../src/types';
+
+// Expo Goでのリダイレクト処理に必要
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -28,16 +39,58 @@ export default function SettingsScreen() {
   });
   const [calendars, setCalendars] = useState<any[]>([]);
   const [connecting, setConnecting] = useState(false);
+  const [googleConnecting, setGoogleConnecting] = useState(false);
+
+  // Google OAuth設定
+  const redirectUri = AuthSession.makeRedirectUri();
+
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: GOOGLE_CLIENT_ID,
+      scopes: GOOGLE_SCOPES,
+      redirectUri,
+      responseType: AuthSession.ResponseType.Token,
+      // PKCEをスキップ（暗黙的フロー）
+      usePKCE: false,
+    },
+    { authorizationEndpoint: GOOGLE_AUTH_URL }
+  );
 
   useEffect(() => {
     loadSettings();
   }, []);
 
+  // OAuthレスポンスを処理
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { access_token } = response.params;
+      if (access_token) {
+        handleGoogleTokenReceived(access_token);
+      }
+    } else if (response?.type === 'error') {
+      setGoogleConnecting(false);
+      Alert.alert('認証エラー', 'Googleアカウントへの接続に失敗しました。');
+    } else if (response?.type === 'dismiss') {
+      setGoogleConnecting(false);
+    }
+  }, [response]);
+
+  const handleGoogleTokenReceived = async (token: string) => {
+    try {
+      await saveGoogleToken(token);
+      const s = await loadCalendarSettings();
+      setSettings(s);
+      Alert.alert('✅ 接続完了', 'Googleカレンダーに接続しました！');
+    } catch (e) {
+      Alert.alert('エラー', 'トークンの保存に失敗しました');
+    }
+    setGoogleConnecting(false);
+  };
+
   const loadSettings = async () => {
     const s = await loadCalendarSettings();
     setSettings(s);
     if (s.appleCalendarEnabled) {
-      // 接続済みならカレンダー一覧を取得
       try {
         const cals = await getAvailableCalendars();
         setCalendars(cals);
@@ -50,7 +103,6 @@ export default function SettingsScreen() {
   // Appleカレンダー接続/切断
   const handleAppleCalendarConnect = async () => {
     if (settings.appleCalendarEnabled) {
-      // 切断
       const updated = { ...settings, appleCalendarEnabled: false };
       setSettings(updated);
       setCalendars([]);
@@ -58,7 +110,6 @@ export default function SettingsScreen() {
       return;
     }
 
-    // 接続
     setConnecting(true);
     try {
       const granted = await requestCalendarPermission();
@@ -78,13 +129,24 @@ export default function SettingsScreen() {
     setConnecting(false);
   };
 
-  // Googleカレンダー（未実装）
-  const handleGoogleCalendarConnect = () => {
-    Alert.alert(
-      'Googleカレンダー',
-      'Googleカレンダー連携は今後のアップデートで対応予定です。',
-      [{ text: 'OK' }]
-    );
+  // Googleカレンダー接続
+  const handleGoogleCalendarConnect = async () => {
+    if (settings.googleCalendarEnabled) {
+      // 切断
+      await disconnectGoogle();
+      const s = await loadCalendarSettings();
+      setSettings(s);
+      return;
+    }
+
+    // OAuth開始
+    setGoogleConnecting(true);
+    try {
+      await promptAsync();
+    } catch (e) {
+      setGoogleConnecting(false);
+      Alert.alert('エラー', 'Google認証の起動に失敗しました');
+    }
   };
 
   return (
@@ -134,18 +196,32 @@ export default function SettingsScreen() {
             <Text style={styles.calendarIcon}>📆</Text>
             <View style={styles.calendarCardInfo}>
               <Text style={styles.calendarCardTitle}>Googleカレンダー</Text>
-              <Text style={styles.calendarCardHint}>今後対応予定</Text>
+              <Text style={styles.calendarCardHint}>
+                {settings.googleCalendarEnabled
+                  ? '✅ 接続済み'
+                  : 'Googleアカウントのカレンダーに追加'}
+              </Text>
             </View>
           </View>
           <Pressable
             onPress={handleGoogleCalendarConnect}
+            disabled={googleConnecting || !request}
             style={({ pressed }) => [
               styles.connectBtn,
-              styles.comingSoonBtn,
+              settings.googleCalendarEnabled && styles.disconnectBtn,
               pressed && styles.btnPressed,
             ]}
           >
-            <Text style={[styles.connectBtnText, styles.comingSoonText]}>準備中</Text>
+            {googleConnecting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={[
+                styles.connectBtnText,
+                settings.googleCalendarEnabled && styles.disconnectBtnText,
+              ]}>
+                {settings.googleCalendarEnabled ? '切断する' : 'Googleでログイン'}
+              </Text>
+            )}
           </Pressable>
         </View>
 

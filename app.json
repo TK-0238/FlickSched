@@ -35,7 +35,8 @@
         {
           "calendarPermission": "カレンダーに予定を追加するためにアクセスが必要です"
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }
