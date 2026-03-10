@@ -1,5 +1,5 @@
-// 付箋トレイ — 画面下部のモダンな付箋一覧（並び替えモード対応）
-import React, { useState } from 'react';
+// 付箋トレイ — 画面下部（スワイプ並び替え対応）
+import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,8 +28,6 @@ export function StickyTray({
   onDragEnd,
   onReorder,
 }: Props) {
-  const [reorderMode, setReorderMode] = useState(false);
-
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -43,35 +41,15 @@ export function StickyTray({
             <Text style={styles.countText}>{tasks.length}</Text>
           </View>
         </View>
-        <View style={styles.headerRight}>
-          {/* 並び替えモード切り替え */}
-          <Pressable
-            onPress={() => setReorderMode(!reorderMode)}
-            style={({ pressed }) => [
-              styles.reorderBtn,
-              reorderMode && styles.reorderBtnActive,
-              pressed && { opacity: 0.7 },
-            ]}
-          >
-            <Text style={[
-              styles.reorderBtnText,
-              reorderMode && styles.reorderBtnTextActive,
-            ]}>
-              {reorderMode ? '✓ 完了' : '⇄ 並び替え'}
-            </Text>
-          </Pressable>
-          {!reorderMode && (
-            <Pressable
-              onPress={onAddNew}
-              style={({ pressed }) => [
-                styles.headerAddBtn,
-                pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
-              ]}
-            >
-              <Text style={styles.headerAddBtnText}>＋ 新規作成</Text>
-            </Pressable>
-          )}
-        </View>
+        <Pressable
+          onPress={onAddNew}
+          style={({ pressed }) => [
+            styles.headerAddBtn,
+            pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
+          ]}
+        >
+          <Text style={styles.headerAddBtnText}>＋ 新規作成</Text>
+        </Pressable>
       </View>
       <ScrollView
         horizontal
@@ -80,70 +58,34 @@ export function StickyTray({
         bounces={true}
         nestedScrollEnabled={true}
       >
-        {tasks.map((task, index) => (
-          <View key={task.id} style={styles.noteWrapper}>
-            {reorderMode ? (
-              /* 並び替えモード：左右ボタン付き */
-              <View style={styles.reorderItem}>
-                <Pressable
-                  onPress={() => onReorder?.(task.id, 'left')}
-                  style={[styles.arrowBtn, index === 0 && styles.arrowBtnDisabled]}
-                  disabled={index === 0}
-                >
-                  <Text style={[styles.arrowText, index === 0 && styles.arrowTextDisabled]}>‹</Text>
-                </Pressable>
-                <View style={styles.reorderNoteContainer}>
-                  <LinearGradient
-                    colors={[task.color, task.color + 'CC']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.reorderNote}
-                  >
-                    <Text style={styles.reorderIcon}>{task.icon}</Text>
-                    <Text style={styles.reorderTitle} numberOfLines={1}>{task.title}</Text>
-                  </LinearGradient>
-                  <View style={styles.orderBadge}>
-                    <Text style={styles.orderBadgeText}>{index + 1}</Text>
-                  </View>
-                </View>
-                <Pressable
-                  onPress={() => onReorder?.(task.id, 'right')}
-                  style={[styles.arrowBtn, index === tasks.length - 1 && styles.arrowBtnDisabled]}
-                  disabled={index === tasks.length - 1}
-                >
-                  <Text style={[styles.arrowText, index === tasks.length - 1 && styles.arrowTextDisabled]}>›</Text>
-                </Pressable>
-              </View>
-            ) : (
-              /* 通常モード */
-              <StickyNote
-                task={task}
-                onTap={onTapTask}
-                onLongPress={onLongPressTask}
-                onDragStart={onDragStart}
-                onDragMove={onDragMove}
-                onDragEnd={onDragEnd}
-              />
-            )}
-          </View>
+        {tasks.map(task => (
+          <StickyNote
+            key={task.id}
+            task={task}
+            onTap={onTapTask}
+            onLongPress={onLongPressTask}
+            onDragStart={onDragStart}
+            onDragMove={onDragMove}
+            onDragEnd={onDragEnd}
+            onSwapLeft={onReorder ? (t) => onReorder(t.id, 'left') : undefined}
+            onSwapRight={onReorder ? (t) => onReorder(t.id, 'right') : undefined}
+          />
         ))}
-        {!reorderMode && (
-          <Pressable
-            onPress={onAddNew}
-            style={({ pressed }) => [
-              styles.addButton,
-              pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
-            ]}
+        <Pressable
+          onPress={onAddNew}
+          style={({ pressed }) => [
+            styles.addButton,
+            pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
+          ]}
+        >
+          <LinearGradient
+            colors={[COLORS.primaryGlow, 'transparent']}
+            style={styles.addButtonGradient}
           >
-            <LinearGradient
-              colors={[COLORS.primaryGlow, 'transparent']}
-              style={styles.addButtonGradient}
-            >
-              <Text style={styles.addIcon}>＋</Text>
-              <Text style={styles.addLabel}>付箋を作る</Text>
-            </LinearGradient>
-          </Pressable>
-        )}
+            <Text style={styles.addIcon}>＋</Text>
+            <Text style={styles.addLabel}>付箋を作る</Text>
+          </LinearGradient>
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -168,11 +110,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -242,94 +179,5 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '700',
     letterSpacing: 0.3,
-  },
-  reorderBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
-    backgroundColor: COLORS.surfaceLight,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  reorderBtnActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  reorderBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-  },
-  reorderBtnTextActive: {
-    color: COLORS.background,
-    fontWeight: '800',
-  },
-  noteWrapper: {
-    // ラッパー
-  },
-  reorderItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    marginHorizontal: 2,
-  },
-  arrowBtn: {
-    width: 28,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 10,
-    backgroundColor: COLORS.surfaceLight,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  arrowBtnDisabled: {
-    opacity: 0.25,
-  },
-  arrowText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  arrowTextDisabled: {
-    color: COLORS.textMuted,
-  },
-  reorderNoteContainer: {
-    position: 'relative',
-  },
-  reorderNote: {
-    width: 72,
-    height: 80,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  reorderIcon: {
-    fontSize: 26,
-  },
-  reorderTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: 'rgba(0,0,0,0.7)',
-    marginTop: 2,
-  },
-  orderBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.trayBackground,
-  },
-  orderBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.background,
   },
 });

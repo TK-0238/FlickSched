@@ -1,4 +1,4 @@
-// 付箋カード — モダンなデザインのドラッグ可能カード
+// 付箋カード — スワイプ並び替え対応
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -6,9 +6,9 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
   runOnJS,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants';
 import type { TaskTemplate } from '../types';
@@ -20,14 +20,26 @@ interface Props {
   onDragStart?: (task: TaskTemplate) => void;
   onDragMove?: (task: TaskTemplate, absoluteY: number) => void;
   onDragEnd?: (task: TaskTemplate, absoluteY: number) => void;
+  onSwapLeft?: (task: TaskTemplate) => void;
+  onSwapRight?: (task: TaskTemplate) => void;
 }
 
-export function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, onDragEnd }: Props) {
+const SWAP_THRESHOLD = 45;
+const DIRECTION_THRESHOLD = 12;
+
+export function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, onDragEnd, onSwapLeft, onSwapRight }: Props) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
   const zIdx = useSharedValue(1);
   const isDragging = useSharedValue(false);
+  // ドラッグ方向: 0=未決定, 1=水平(並び替え), 2=垂直(タイムライン)
+  const dragDirection = useSharedValue(0);
+  const swapped = useSharedValue(false);
+
+  const doHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
 
   // タップジェスチャー
   const tapGesture = Gesture.Tap()
@@ -42,29 +54,58 @@ export function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, 
       runOnJS(onLongPress)(task);
     });
 
-  // ドラッグジェスチャー（横スクロールと干渉しないように設定）
+  // ドラッグジェスチャー（横=並び替え、縦=タイムライン配置）
   const panGesture = Gesture.Pan()
     .activateAfterLongPress(200)
-    .activeOffsetY([-10, 10])
-    .failOffsetX([-20, 20])
     .onStart(() => {
       isDragging.value = true;
-      scale.value = withSpring(1.15, { damping: 10, stiffness: 200 });
+      dragDirection.value = 0;
+      swapped.value = false;
+      scale.value = withSpring(1.12, { damping: 10, stiffness: 200 });
       zIdx.value = 1000;
-      if (onDragStart) runOnJS(onDragStart)(task);
     })
     .onUpdate((e) => {
-      translateX.value = e.translationX;
-      translateY.value = e.translationY;
-      if (onDragMove) runOnJS(onDragMove)(task, e.absoluteY);
+      // 方向が未決定の場合、最初の動きで判定
+      if (dragDirection.value === 0) {
+        if (Math.abs(e.translationX) > DIRECTION_THRESHOLD || Math.abs(e.translationY) > DIRECTION_THRESHOLD) {
+          dragDirection.value = Math.abs(e.translationX) > Math.abs(e.translationY) ? 1 : 2;
+          if (dragDirection.value === 2 && onDragStart) {
+            runOnJS(onDragStart)(task);
+          }
+        }
+      }
+
+      if (dragDirection.value === 1) {
+        // 水平方向 = 並び替え
+        translateX.value = e.translationX;
+        // スワイプ閾値に達したら入れ替え
+        if (!swapped.value && e.translationX > SWAP_THRESHOLD && onSwapRight) {
+          swapped.value = true;
+          runOnJS(doHaptic)();
+          runOnJS(onSwapRight)(task);
+        } else if (!swapped.value && e.translationX < -SWAP_THRESHOLD && onSwapLeft) {
+          swapped.value = true;
+          runOnJS(doHaptic)();
+          runOnJS(onSwapLeft)(task);
+        }
+      } else if (dragDirection.value === 2) {
+        // 垂直方向 = タイムラインへドラッグ
+        translateX.value = e.translationX;
+        translateY.value = e.translationY;
+        if (onDragMove) runOnJS(onDragMove)(task, e.absoluteY);
+      }
     })
     .onEnd((e) => {
+      const dir = dragDirection.value;
       isDragging.value = false;
       translateX.value = withSpring(0, { damping: 15 });
       translateY.value = withSpring(0, { damping: 15 });
       scale.value = withSpring(1, { damping: 12 });
       zIdx.value = 1;
-      if (onDragEnd) runOnJS(onDragEnd)(task, e.absoluteY);
+      dragDirection.value = 0;
+      if (dir === 2 && onDragEnd) {
+        runOnJS(onDragEnd)(task, e.absoluteY);
+      }
     })
     .onFinalize(() => {
       if (isDragging.value) {
@@ -73,6 +114,7 @@ export function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, 
         translateY.value = withSpring(0, { damping: 15 });
         scale.value = withSpring(1, { damping: 12 });
         zIdx.value = 1;
+        dragDirection.value = 0;
       }
     });
 
