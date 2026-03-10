@@ -7,6 +7,7 @@ export interface TaskTemplate {
   icon: string;            // emoji
   defaultStartTime?: string; // デフォルト開始時刻 "09:00"
   category?: string;       // カテゴリ
+  memo?: string;           // メモ（自由記入）
 }
 
 // タイムラインに配置済みの予定
@@ -20,6 +21,7 @@ export interface ScheduledTask {
   duration: number;
   color: string;
   icon: string;
+  memo?: string;           // メモ
   calendarEventId?: string; // カレンダー連携済みの場合
   synced: boolean;         // カレンダーに同期済みか
 }

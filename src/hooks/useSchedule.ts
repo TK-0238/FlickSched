@@ -62,6 +62,7 @@ export function useSchedule() {
       duration: template.duration,
       color: template.color,
       icon: template.icon,
+      memo: template.memo,
       synced: false,
     };
 
@@ -89,6 +90,7 @@ export function useSchedule() {
       duration: template.duration,
       color: template.color,
       icon: template.icon,
+      memo: template.memo,
       synced: false,
     };
 

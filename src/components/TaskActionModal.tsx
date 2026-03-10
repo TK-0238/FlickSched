@@ -46,6 +46,9 @@ export function TaskActionModal({
               <Text style={styles.headerTime}>
                 {task.startTime} – {task.endTime}（{task.duration}分）
               </Text>
+              {task.memo ? (
+                <Text style={styles.headerMemo}>📝 {task.memo}</Text>
+              ) : null}
             </View>
           </LinearGradient>
 
@@ -138,6 +141,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'rgba(0,0,0,0.5)',
     marginTop: 2,
+  },
+  headerMemo: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(0,0,0,0.45)',
+    marginTop: 4,
+    lineHeight: 17,
   },
   actionBtn: {
     flexDirection: 'row',

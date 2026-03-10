@@ -40,6 +40,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
   const [customMinutes, setCustomMinutes] = useState('');
   const [startHour, setStartHour] = useState(-1);
   const [startMinute, setStartMinute] = useState(0);
+  const [memo, setMemo] = useState('');
 
   useEffect(() => {
     if (task) {
@@ -48,6 +49,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
       setColor(task.color);
       setIcon(task.icon);
       setDefaultStartTime(task.defaultStartTime || '');
+      setMemo(task.memo || '');
       // デフォルト開始時刻をパース
       if (task.defaultStartTime) {
         const [h, m] = task.defaultStartTime.split(':').map(Number);
@@ -78,6 +80,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
       setCustomMode(false);
       setCustomHours('');
       setCustomMinutes('');
+      setMemo('');
     }
   }, [task, visible]);
 
@@ -89,6 +92,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
       color,
       icon,
       defaultStartTime: defaultStartTime || undefined,
+      memo: memo.trim() || undefined,
     });
     onClose();
   };
@@ -332,6 +336,21 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
               ))}
             </View>
           </ScrollView>
+
+          {/* メモ欄 */}
+          <View style={styles.memoSection}>
+            <Text style={styles.sectionLabel}>📝 メモ</Text>
+            <TextInput
+              style={styles.memoInput}
+              value={memo}
+              onChangeText={setMemo}
+              placeholder="メモを入力（任意）"
+              placeholderTextColor={COLORS.textMuted}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          </View>
 
           {/* ボタン */}
           <View style={styles.buttonRow}>
@@ -696,4 +715,26 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   saveBtnText: { color: COLORS.background, fontWeight: '800', fontSize: 15 },
+  memoSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  memoInput: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: 14,
+    padding: 14,
+    fontSize: 15,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    minHeight: 80,
+    lineHeight: 22,
+  },
 });
