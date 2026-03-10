@@ -240,11 +240,12 @@ export default function HomeScreen() {
   }, [editingTask, updateTask, addTask]);
 
   // --- 配置済みタスクタップ ---
-  const handleScheduledTaskPress = useCallback((task: ScheduledTask) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedScheduledTask(task);
-    setActionModalVisible(true);
-  }, []);
+  // --- 配置済みタスクをタップ → 1タップで削除 ---
+  const handleScheduledTaskPress = useCallback(async (task: ScheduledTask) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await removeTask(task.id);
+    setToast({ visible: true, message: `「${task.title}」を削除しました`, type: 'info' });
+  }, [removeTask]);
 
   // --- 配置済みタスク長押し → 削除確認 ---
   const handleScheduledTaskLongPress = useCallback((task: ScheduledTask) => {
