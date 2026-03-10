@@ -6,11 +6,11 @@ import {
   Text,
   Pressable,
   ScrollView,
-  SafeAreaView,
   Alert,
   Dimensions,
   LayoutChangeEvent,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
