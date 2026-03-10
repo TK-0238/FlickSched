@@ -1,4 +1,4 @@
-// 付箋トレイ — 画面下部の付箋一覧（横スクロール）
+// 付箋トレイ — 画面下部の付箋一覧（横スクロール、ドラッグ対応）
 import React from 'react';
 import { StyleSheet, View, ScrollView, Text, Pressable } from 'react-native';
 import { StickyNote } from './StickyNote';
@@ -10,14 +10,25 @@ interface Props {
   onTapTask: (task: TaskTemplate) => void;
   onLongPressTask: (task: TaskTemplate) => void;
   onAddNew: () => void;
+  onDragStart?: (task: TaskTemplate) => void;
+  onDragMove?: (task: TaskTemplate, absoluteY: number) => void;
+  onDragEnd?: (task: TaskTemplate, absoluteY: number) => void;
 }
 
-export function StickyTray({ tasks, onTapTask, onLongPressTask, onAddNew }: Props) {
+export function StickyTray({
+  tasks,
+  onTapTask,
+  onLongPressTask,
+  onAddNew,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+}: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.label}>📌 タスク付箋</Text>
-        <Text style={styles.hint}>タップで予定に追加</Text>
+        <Text style={styles.hint}>タップ or ドラッグで予定に追加</Text>
       </View>
       <ScrollView
         horizontal
@@ -30,6 +41,9 @@ export function StickyTray({ tasks, onTapTask, onLongPressTask, onAddNew }: Prop
             task={task}
             onTap={onTapTask}
             onLongPress={onLongPressTask}
+            onDragStart={onDragStart}
+            onDragMove={onDragMove}
+            onDragEnd={onDragEnd}
           />
         ))}
         {/* 追加ボタン */}

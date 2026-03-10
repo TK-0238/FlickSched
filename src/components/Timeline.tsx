@@ -20,6 +20,7 @@ interface Props {
   onTaskLongPress: (task: ScheduledTask) => void;
   onTimeSlotPress: (minutes: number) => void;
   scrollViewRef?: React.RefObject<ScrollView>;
+  onScroll?: (event: any) => void;
 }
 
 export function Timeline({
@@ -28,6 +29,7 @@ export function Timeline({
   onTaskLongPress,
   onTimeSlotPress,
   scrollViewRef,
+  onScroll,
 }: Props) {
   const timeSlots = generateTimeSlots();
   const totalHeight = TIMELINE.HOUR_HEIGHT * (TIMELINE.END_HOUR - TIMELINE.START_HOUR);
@@ -55,6 +57,8 @@ export function Timeline({
       style={styles.container}
       contentContainerStyle={{ height: totalHeight }}
       showsVerticalScrollIndicator={true}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
     >
       {/* 時間ラベル + 線 */}
       {timeSlots.map(slot => {

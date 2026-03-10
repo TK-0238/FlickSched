@@ -1,4 +1,4 @@
-// メインホーム画面 — タイムライン + 付箋トレイ
+// メインホーム画面 — タイムライン + 付箋トレイ + ドラッグ配置
 import React, { useState, useRef, useCallback } from 'react';
 import {
   StyleSheet,
@@ -9,7 +9,13 @@ import {
   SafeAreaView,
   Alert,
   Dimensions,
+  LayoutChangeEvent,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { COLORS, TIMELINE } from '../src/constants';
@@ -48,6 +54,10 @@ export default function HomeScreen() {
 
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // タイムラインのレイアウト情報（ドラッグ→時間変換用）
+  const timelineTopRef = useRef(0);
+  const timelineScrollOffsetRef = useRef(0);
+
   // モーダル状態
   const [editorVisible, setEditorVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskTemplate | null>(null);
@@ -66,20 +76,42 @@ export default function HomeScreen() {
   // トースト状態
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as const });
 
+  // ドラッグプレビュー状態
+  const [dragPreview, setDragPreview] = useState<{
+    visible: boolean;
+    timeLabel: string;
+    y: number;
+  }>({ visible: false, timeLabel: '', y: 0 });
+  const dragPreviewOpacity = useSharedValue(0);
+
+  // タイムラインの画面上の位置を測定
+  const handleTimelineLayout = useCallback((event: LayoutChangeEvent) => {
+    event.target.measureInWindow((_x: number, y: number) => {
+      timelineTopRef.current = y;
+    });
+  }, []);
+
+  // スクロールオフセットを追跡
+  const handleTimelineScroll = useCallback((event: any) => {
+    timelineScrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+  }, []);
+
+  // ドラッグ中のY座標 → タイムライン上の時間を計算
+  const calcTimeFromDragY = useCallback((absoluteY: number): { minutes: number; timeStr: string } | null => {
+    const relativeY = absoluteY - timelineTopRef.current + timelineScrollOffsetRef.current;
+    if (relativeY < 0) return null;
+    const minutes = yPositionToMinutes(relativeY);
+    return { minutes, timeStr: minutesToTime(minutes) };
+  }, []);
+
   // --- 付箋タップ → タイムラインに飛ぶ ---
   const handleTapTask = useCallback(async (template: TaskTemplate) => {
-    // 触覚フィードバック
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    // スケジュールに自動追加
     const scheduled = await scheduleTaskAuto(template);
-
-    // フライアニメーション
     const targetY = minutesToYPosition(
       parseInt(scheduled.startTime.split(':')[0]) * 60 +
       parseInt(scheduled.startTime.split(':')[1])
     );
-
     setFlyData({
       color: template.color,
       icon: template.icon,
@@ -87,16 +119,12 @@ export default function HomeScreen() {
       toY: Math.min(targetY, SCREEN_HEIGHT * 0.4),
     });
     setFlyVisible(true);
-
-    // タイムラインを該当時間にスクロール
     setTimeout(() => {
       scrollViewRef.current?.scrollTo({
         y: Math.max(0, targetY - 100),
         animated: true,
       });
     }, 300);
-
-    // トースト表示
     setToast({
       visible: true,
       message: `${template.icon} ${template.title} → ${scheduled.startTime}に追加！`,
@@ -110,6 +138,51 @@ export default function HomeScreen() {
     setEditingTask(template);
     setEditorVisible(true);
   }, []);
+
+  // --- ドラッグ開始 ---
+  const handleDragStart = useCallback((_template: TaskTemplate) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    dragPreviewOpacity.value = withTiming(1, { duration: 150 });
+  }, []);
+
+  // --- ドラッグ中（プレビュー更新） ---
+  const handleDragMove = useCallback((_template: TaskTemplate, absoluteY: number) => {
+    const result = calcTimeFromDragY(absoluteY);
+    if (result) {
+      setDragPreview({
+        visible: true,
+        timeLabel: result.timeStr,
+        y: absoluteY,
+      });
+    }
+  }, [calcTimeFromDragY]);
+
+  // --- ドラッグ終了（タイムラインにドロップ） ---
+  const handleDragEnd = useCallback(async (template: TaskTemplate, absoluteY: number) => {
+    dragPreviewOpacity.value = withTiming(0, { duration: 150 });
+    setDragPreview(prev => ({ ...prev, visible: false }));
+
+    const result = calcTimeFromDragY(absoluteY);
+    if (result && absoluteY < timelineTopRef.current + SCREEN_HEIGHT * 0.6) {
+      // タイムライン領域内にドロップされた
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const scheduled = await scheduleTaskAt(template, result.timeStr);
+      // タイムラインを該当位置にスクロール
+      const targetY = minutesToYPosition(result.minutes);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          y: Math.max(0, targetY - 100),
+          animated: true,
+        });
+      }, 200);
+      setToast({
+        visible: true,
+        message: `${template.icon} ${template.title} → ${result.timeStr}に配置！`,
+        type: 'success',
+      });
+    }
+    // タイムライン外にドロップした場合は何もしない（付箋が元の位置に戻る）
+  }, [calcTimeFromDragY, scheduleTaskAt]);
 
   // --- 新規タスク作成 ---
   const handleAddNew = useCallback(() => {
@@ -183,9 +256,14 @@ export default function HomeScreen() {
   }, [markSynced]);
 
   // --- タイムスロットタップ ---
-  const handleTimeSlotPress = useCallback((minutes: number) => {
-    // タイムスロットをタップした時は何もしない（将来的に空き時間からタスク追加）
+  const handleTimeSlotPress = useCallback((_minutes: number) => {
+    // 将来: 空き時間タップから直接タスクを追加
   }, []);
+
+  // ドラッグプレビューのアニメーションスタイル
+  const dragPreviewStyle = useAnimatedStyle(() => ({
+    opacity: dragPreviewOpacity.value,
+  }));
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -208,13 +286,19 @@ export default function HomeScreen() {
         />
 
         {/* タイムライン */}
-        <Timeline
-          tasks={todayTasks}
-          onTaskPress={handleScheduledTaskPress}
-          onTaskLongPress={handleScheduledTaskLongPress}
-          onTimeSlotPress={handleTimeSlotPress}
-          scrollViewRef={scrollViewRef}
-        />
+        <View
+          style={styles.timelineWrapper}
+          onLayout={handleTimelineLayout}
+        >
+          <Timeline
+            tasks={todayTasks}
+            onTaskPress={handleScheduledTaskPress}
+            onTaskLongPress={handleScheduledTaskLongPress}
+            onTimeSlotPress={handleTimeSlotPress}
+            scrollViewRef={scrollViewRef}
+            onScroll={handleTimelineScroll}
+          />
+        </View>
 
         {/* 付箋トレイ */}
         <StickyTray
@@ -222,7 +306,23 @@ export default function HomeScreen() {
           onTapTask={handleTapTask}
           onLongPressTask={handleLongPressTask}
           onAddNew={handleAddNew}
+          onDragStart={handleDragStart}
+          onDragMove={handleDragMove}
+          onDragEnd={handleDragEnd}
         />
+
+        {/* ドラッグ中の時刻プレビュー */}
+        {dragPreview.visible && (
+          <Animated.View
+            style={[
+              styles.dragTimePreview,
+              { top: dragPreview.y - 50 },
+              dragPreviewStyle,
+            ]}
+          >
+            <Text style={styles.dragTimeText}>🕐 {dragPreview.timeLabel}</Text>
+          </Animated.View>
+        )}
 
         {/* フライアニメーション */}
         <FlyAnimation
@@ -300,5 +400,27 @@ const styles = StyleSheet.create({
   },
   settingsIcon: {
     fontSize: 22,
+  },
+  timelineWrapper: {
+    flex: 1,
+  },
+  dragTimePreview: {
+    position: 'absolute',
+    left: SCREEN_WIDTH / 2 - 50,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    zIndex: 999,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  dragTimeText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a2e',
   },
 });
