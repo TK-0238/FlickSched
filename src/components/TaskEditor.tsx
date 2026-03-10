@@ -35,6 +35,9 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
   const [color, setColor] = useState(STICKY_COLORS[0]);
   const [icon, setIcon] = useState('💼');
   const [defaultStartTime, setDefaultStartTime] = useState('');
+  const [customMode, setCustomMode] = useState(false);
+  const [customHours, setCustomHours] = useState('');
+  const [customMinutes, setCustomMinutes] = useState('');
 
   useEffect(() => {
     if (task) {
@@ -43,12 +46,25 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
       setColor(task.color);
       setIcon(task.icon);
       setDefaultStartTime(task.defaultStartTime || '');
+      // プリセットにない時間ならカスタムモードで表示
+      const isPreset = DURATION_OPTIONS.includes(task.duration as any);
+      setCustomMode(!isPreset);
+      if (!isPreset) {
+        setCustomHours(String(Math.floor(task.duration / 60) || ''));
+        setCustomMinutes(String(task.duration % 60 || ''));
+      } else {
+        setCustomHours('');
+        setCustomMinutes('');
+      }
     } else {
       setTitle('');
       setDuration(60);
       setColor(STICKY_COLORS[Math.floor(Math.random() * STICKY_COLORS.length)]);
       setIcon('💼');
       setDefaultStartTime('');
+      setCustomMode(false);
+      setCustomHours('');
+      setCustomMinutes('');
     }
   }, [task, visible]);
 
@@ -132,21 +148,80 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
               {DURATION_OPTIONS.map(d => (
                 <Pressable
                   key={d}
-                  onPress={() => setDuration(d)}
+                  onPress={() => { setDuration(d); setCustomMode(false); }}
                   style={[
                     styles.durationBtn,
-                    duration === d && styles.durationBtnActive,
+                    !customMode && duration === d && styles.durationBtnActive,
                   ]}
                 >
                   <Text style={[
                     styles.durationText,
-                    duration === d && styles.durationTextActive,
+                    !customMode && duration === d && styles.durationTextActive,
                   ]}>
                     {d >= 60 ? `${d / 60}時間` : `${d}分`}
                   </Text>
                 </Pressable>
               ))}
+              {/* カスタム時間ボタン */}
+              <Pressable
+                onPress={() => setCustomMode(true)}
+                style={[
+                  styles.durationBtn,
+                  customMode && styles.durationBtnActive,
+                ]}
+              >
+                <Text style={[
+                  styles.durationText,
+                  customMode && styles.durationTextActive,
+                ]}>
+                  ✏️ 自由入力
+                </Text>
+              </Pressable>
             </View>
+            {/* カスタム時間入力 */}
+            {customMode && (
+              <View style={styles.customDurationRow}>
+                <View style={styles.customInputGroup}>
+                  <TextInput
+                    style={styles.customInput}
+                    value={customHours}
+                    onChangeText={(v) => {
+                      const num = v.replace(/[^0-9]/g, '');
+                      setCustomHours(num);
+                      const h = parseInt(num || '0');
+                      const m = parseInt(customMinutes || '0');
+                      if (h > 0 || m > 0) setDuration(h * 60 + m);
+                    }}
+                    placeholder="0"
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                  <Text style={styles.customInputLabel}>時間</Text>
+                </View>
+                <View style={styles.customInputGroup}>
+                  <TextInput
+                    style={styles.customInput}
+                    value={customMinutes}
+                    onChangeText={(v) => {
+                      const num = v.replace(/[^0-9]/g, '');
+                      setCustomMinutes(num);
+                      const h = parseInt(customHours || '0');
+                      const m = parseInt(num || '0');
+                      if (h > 0 || m > 0) setDuration(h * 60 + m);
+                    }}
+                    placeholder="0"
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                  <Text style={styles.customInputLabel}>分</Text>
+                </View>
+                <Text style={styles.customResult}>
+                  → {duration > 0 ? `${Math.floor(duration / 60) > 0 ? `${Math.floor(duration / 60)}時間` : ''}${duration % 60 > 0 ? `${duration % 60}分` : ''}` : '---'}
+                </Text>
+              </View>
+            )}
 
             {/* 色選択 */}
             <Text style={styles.sectionLabel}>付箋の色</Text>
@@ -358,6 +433,42 @@ const styles = StyleSheet.create({
   durationTextActive: {
     color: COLORS.background,
     fontWeight: '800',
+  },
+  customDurationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 10,
+    paddingHorizontal: 4,
+  },
+  customInputGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  customInput: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '50',
+    width: 56,
+    textAlign: 'center',
+  },
+  customInputLabel: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  customResult: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: '700',
+    marginLeft: 4,
   },
   colorRow: {
     flexDirection: 'row',
