@@ -151,7 +151,21 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      {/* カスタムヘッダー（閉じるボタン付き） */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>⚙️ 設定</Text>
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => [
+            styles.closeBtn,
+            pressed && { opacity: 0.7 },
+          ]}
+        >
+          <Text style={styles.closeBtnText}>✕ 閉じる</Text>
+        </Pressable>
+      </View>
+
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* カレンダー連携 */}
         <Text style={styles.sectionTitle}>📅 カレンダー連携</Text>
 
@@ -263,6 +277,31 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  closeBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  closeBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.background,
   },
   container: {
     flex: 1,

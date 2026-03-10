@@ -29,7 +29,15 @@ export function StickyTray({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.label}>📌 タスク付箋 ({tasks.length})</Text>
-        <Text style={styles.hint}>タップ or ドラッグで予定に追加</Text>
+        <Pressable
+          onPress={onAddNew}
+          style={({ pressed }) => [
+            styles.headerAddBtn,
+            pressed && { opacity: 0.7 },
+          ]}
+        >
+          <Text style={styles.headerAddBtnText}>＋ 新規作成</Text>
+        </Pressable>
       </View>
       <ScrollView
         horizontal
@@ -49,16 +57,16 @@ export function StickyTray({
             onDragEnd={onDragEnd}
           />
         ))}
-        {/* 追加ボタン */}
+        {/* 末尾の追加ボタン */}
         <Pressable
           onPress={onAddNew}
           style={({ pressed }) => [
             styles.addButton,
-            pressed && { opacity: 0.7 },
+            pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
           ]}
         >
           <Text style={styles.addIcon}>＋</Text>
-          <Text style={styles.addLabel}>追加</Text>
+          <Text style={styles.addLabel}>付箋を作る</Text>
         </Pressable>
       </ScrollView>
     </View>
@@ -85,9 +93,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
   },
-  hint: {
-    fontSize: 11,
-    color: COLORS.textMuted,
+  headerAddBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  headerAddBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.background,
   },
   scrollContent: {
     paddingHorizontal: 10,
@@ -99,19 +114,21 @@ const styles = StyleSheet.create({
     height: 90,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: COLORS.primary,
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 6,
+    backgroundColor: 'rgba(78, 205, 196, 0.08)',
   },
   addIcon: {
     fontSize: 28,
-    color: COLORS.textMuted,
+    color: COLORS.primary,
   },
   addLabel: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: COLORS.primary,
     marginTop: 4,
+    fontWeight: '600',
   },
 });

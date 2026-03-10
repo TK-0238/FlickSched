@@ -28,8 +28,8 @@ export default function RootLayout() {
           name="settings"
           options={{
             title: '設定',
-            presentation: 'modal',
-            headerBackTitle: '戻る',
+            presentation: 'card',
+            headerShown: false,
           }}
         />
       </Stack>
