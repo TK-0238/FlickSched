@@ -1,4 +1,5 @@
 // expo-router ルートレイアウト
+import React from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -9,31 +10,31 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: COLORS.surface },
-          headerTintColor: COLORS.text,
-          headerTitleStyle: { fontWeight: '700' },
-          contentStyle: { backgroundColor: COLORS.background },
-        }}
-      >
-        <Stack.Screen
-          name="index"
-          options={{
-            title: 'サクヨテ',
-            headerShown: false,
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: COLORS.surface },
+            headerTintColor: COLORS.text,
+            headerTitleStyle: { fontWeight: '700' },
+            contentStyle: { backgroundColor: COLORS.background },
           }}
-        />
-        <Stack.Screen
-          name="settings"
-          options={{
-            title: '設定',
-            presentation: 'card',
-            headerShown: false,
-          }}
-        />
-      </Stack>
-    </GestureHandlerRootView>
+        >
+          <Stack.Screen
+            name="index"
+            options={{
+              title: 'サクヨテ',
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="settings"
+            options={{
+              title: '設定',
+              presentation: 'card',
+              headerShown: false,
+            }}
+          />
+        </Stack>
+      </GestureHandlerRootView>
   );
 }
 

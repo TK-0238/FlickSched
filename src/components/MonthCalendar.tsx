@@ -1,4 +1,4 @@
-// 月カレンダーモーダル — 月一覧表示と日付選択（5〜6ヶ月先まで対応）
+// 月カレンダーモーダル — 月一覧表示と日付選択（無制限の未来日付に対応、自動拡張）
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   StyleSheet,
@@ -29,8 +29,11 @@ const GRID_WIDTH = SCREEN_WIDTH - CALENDAR_PADDING * 2 - 24;
 const DAY_CELL_SIZE = Math.floor(GRID_WIDTH / 7);
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
-const MONTHS_BACK = 1;   // 先月まで遡れる
-const MONTHS_AHEAD = 12; // 12ヶ月先（約1年）まで
+// 過去方向は固定（2年）、未来方向は動的拡張（境界接近で自動追加）
+const MONTHS_BACK = 24;            // 2年前まで（固定）
+const INITIAL_MONTHS_AHEAD = 36;   // 初期: 3年先まで
+const EXTEND_THRESHOLD = 6;        // 境界6ヶ月以内で自動拡張
+const EXTEND_AMOUNT = 24;          // 2年ずつ拡張
 
 // 月タブ1つあたりの幅（パディング含む）
 const TAB_MIN_WIDTH = 52;
@@ -58,6 +61,8 @@ export function MonthCalendar({
     startOfMonth(new Date(selectedDate))
   );
   const monthScrollRef = useRef<ScrollView>(null);
+  // 未来方向の動的レンジ（自動拡張対応）
+  const [monthsAhead, setMonthsAhead] = useState(INITIAL_MONTHS_AHEAD);
 
   // モーダル表示時に選択中日付の月へジャンプ
   useEffect(() => {
@@ -68,15 +73,15 @@ export function MonthCalendar({
     }
   }, [visible, selectedDate]);
 
-  // ── 月タブ一覧（先月〜12ヶ月先） ──
+  // ── 月タブ一覧（2年前〜動的に拡張される未来） ──
   const monthTabs = useMemo(() => {
     const base = startOfMonth(now);
     const tabs: Date[] = [];
-    for (let i = -MONTHS_BACK; i <= MONTHS_AHEAD; i++) {
+    for (let i = -MONTHS_BACK; i <= monthsAhead; i++) {
       tabs.push(addMonths(base, i));
     }
     return tabs;
-  }, []);
+  }, [monthsAhead]);
 
   // ── 日付→タスク数のマップ ──
   const taskCountMap = useMemo(() => {
@@ -96,6 +101,16 @@ export function MonthCalendar({
     });
     return set;
   }, [scheduledTasks]);
+
+  // ── 表示月が範囲境界に近づいたら未来方向を自動拡張 ──
+  useEffect(() => {
+    const base = startOfMonth(now);
+    const diff = (viewingMonth.getFullYear() - base.getFullYear()) * 12
+      + (viewingMonth.getMonth() - base.getMonth());
+    if (diff > monthsAhead - EXTEND_THRESHOLD) {
+      setMonthsAhead(prev => Math.max(prev, diff + EXTEND_AMOUNT));
+    }
+  }, [viewingMonth, monthsAhead]);
 
   // ── カレンダーグリッド（6行×7列に統一） ──
   const calendarRows = useMemo(() => {
@@ -123,31 +138,23 @@ export function MonthCalendar({
     return rows;
   }, [viewingMonth]);
 
-  // ── 月タブへのスクロール ──
+  // ── 月タブへのスクロール（O(1)計算） ──
   const scrollToMonthTab = (month: Date) => {
     const base = startOfMonth(now);
-    let idx = MONTHS_BACK; // デフォルト=今月
-    for (let i = -MONTHS_BACK; i <= MONTHS_AHEAD; i++) {
-      const tab = addMonths(base, i);
-      if (tab.getFullYear() === month.getFullYear() && tab.getMonth() === month.getMonth()) {
-        idx = i + MONTHS_BACK;
-        break;
-      }
-    }
+    // 月の差分からインデックスを直接計算
+    const diff = (month.getFullYear() - base.getFullYear()) * 12
+      + (month.getMonth() - base.getMonth());
+    const idx = diff + MONTHS_BACK;
     const itemW = TAB_MIN_WIDTH + TAB_GAP;
     const scrollX = Math.max(0, idx * itemW - SCREEN_WIDTH / 2 + itemW / 2);
     monthScrollRef.current?.scrollTo({ x: scrollX, animated: true });
   };
 
   // ── 月ナビゲーション ──
+  // 過去方向のみ制限（MONTHS_BACK固定）、未来方向は無制限（自動拡張）
   const canGoPrev = useMemo(() => {
     const min = addMonths(startOfMonth(now), -MONTHS_BACK);
     return addMonths(viewingMonth, -1) >= min;
-  }, [viewingMonth]);
-
-  const canGoNext = useMemo(() => {
-    const max = addMonths(startOfMonth(now), MONTHS_AHEAD);
-    return addMonths(viewingMonth, 1) <= max;
   }, [viewingMonth]);
 
   const goToPrevMonth = () => {
@@ -158,7 +165,6 @@ export function MonthCalendar({
   };
 
   const goToNextMonth = () => {
-    if (!canGoNext) return;
     const next = addMonths(viewingMonth, 1);
     setViewingMonth(next);
     scrollToMonthTab(next);
@@ -219,10 +225,9 @@ export function MonthCalendar({
             </Text>
             <Pressable
               onPress={goToNextMonth}
-              style={[styles.monthArrow, !canGoNext && styles.monthArrowDisabled]}
-              disabled={!canGoNext}
+              style={styles.monthArrow}
             >
-              <Text style={[styles.monthArrowText, !canGoNext && styles.monthArrowTextDisabled]}>›</Text>
+              <Text style={styles.monthArrowText}>›</Text>
             </Pressable>
           </View>
 
