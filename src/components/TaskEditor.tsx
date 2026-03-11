@@ -41,6 +41,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
   const [startHour, setStartHour] = useState(-1);
   const [startMinute, setStartMinute] = useState(0);
   const [memo, setMemo] = useState('');
+  const [memoExpanded, setMemoExpanded] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -50,6 +51,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
       setIcon(task.icon);
       setDefaultStartTime(task.defaultStartTime || '');
       setMemo(task.memo || '');
+      setMemoExpanded(!!(task.memo));
       // デフォルト開始時刻をパース
       if (task.defaultStartTime) {
         const [h, m] = task.defaultStartTime.split(':').map(Number);
@@ -81,6 +83,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
       setCustomHours('');
       setCustomMinutes('');
       setMemo('');
+      setMemoExpanded(false);
     }
   }, [task, visible]);
 
@@ -337,19 +340,42 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
             </View>
           </ScrollView>
 
-          {/* メモ欄 */}
+          {/* メモ欄（折りたたみ式） */}
           <View style={styles.memoSection}>
-            <Text style={styles.sectionLabel}>📝 メモ</Text>
-            <TextInput
-              style={styles.memoInput}
-              value={memo}
-              onChangeText={setMemo}
-              placeholder="メモを入力（任意）"
-              placeholderTextColor={COLORS.textMuted}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
+            {memoExpanded ? (
+              <>
+                <Pressable
+                  onPress={() => { if (!memo.trim()) setMemoExpanded(false); }}
+                  style={styles.memoHeader}
+                >
+                  <Text style={styles.sectionLabel}>📝 メモ</Text>
+                  {!memo.trim() && (
+                    <Text style={styles.memoCollapseText}>▲ 閉じる</Text>
+                  )}
+                </Pressable>
+                <TextInput
+                  style={styles.memoInput}
+                  value={memo}
+                  onChangeText={setMemo}
+                  placeholder="メモを入力（任意）"
+                  placeholderTextColor={COLORS.textMuted}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  autoFocus
+                />
+              </>
+            ) : (
+              <Pressable
+                onPress={() => setMemoExpanded(true)}
+                style={({ pressed }) => [
+                  styles.memoToggleBtn,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text style={styles.memoToggleText}>📝 メモを追加</Text>
+              </Pressable>
+            )}
           </View>
 
           {/* ボタン */}
@@ -718,6 +744,31 @@ const styles = StyleSheet.create({
   memoSection: {
     paddingHorizontal: 20,
     paddingBottom: 10,
+  },
+  memoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  memoCollapseText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+  },
+  memoToggleBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  memoToggleText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
   },
   sectionLabel: {
     fontSize: 13,
