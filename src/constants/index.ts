@@ -27,46 +27,46 @@ export const TIMELINE = {
   SLOT_INTERVAL: 30,         // 分刻み
 } as const;
 
-// テーマカラー（モダンダーク）
+// テーマカラー（ライトテーマ）
 export const COLORS = {
   // ベース
-  background: '#0a0a1a',
-  surface: '#141428',
-  surfaceLight: '#1e1e3a',
-  surfaceElevated: '#252548',
+  background: '#FFFFFF',
+  surface: '#F5F5F8',
+  surfaceLight: '#EEEEF2',
+  surfaceElevated: '#E8E8EE',
 
   // ブランド
   primary: '#4ECDC4',
   primaryDark: '#3db8b0',
-  primaryGlow: 'rgba(78, 205, 196, 0.15)',
-  accent: '#A29BFE',
-  accentGlow: 'rgba(162, 155, 254, 0.15)',
+  primaryGlow: 'rgba(78, 205, 196, 0.12)',
+  accent: '#7C6BF0',
+  accentGlow: 'rgba(124, 107, 240, 0.10)',
 
   // テキスト
-  text: '#f0f0ff',
-  textSecondary: '#9898b8',
-  textMuted: '#5c5c78',
+  text: '#1a1a2e',
+  textSecondary: '#6b6b80',
+  textMuted: '#a0a0b0',
 
   // UI
-  border: '#2a2a48',
-  borderLight: '#35355a',
-  danger: '#FF6B6B',
-  dangerGlow: 'rgba(255, 107, 107, 0.15)',
-  success: '#55EFC4',
-  successGlow: 'rgba(85, 239, 196, 0.15)',
-  warning: '#FDCB6E',
+  border: '#e0e0e8',
+  borderLight: '#d0d0da',
+  danger: '#FF5252',
+  dangerGlow: 'rgba(255, 82, 82, 0.10)',
+  success: '#00C48C',
+  successGlow: 'rgba(0, 196, 140, 0.10)',
+  warning: '#FFB74D',
 
   // レイアウト
-  trayBackground: '#0e0e22',
-  timelineBackground: '#0c0c1e',
-  timelineLine: '#1e1e38',
-  overlay: 'rgba(0,0,0,0.7)',
+  trayBackground: '#F8F8FC',
+  timelineBackground: '#FAFAFE',
+  timelineLine: '#e8e8f0',
+  overlay: 'rgba(0,0,0,0.4)',
 
   // グラデーション（LinearGradient用）
-  gradientStart: '#141428',
-  gradientEnd: '#0a0a1a',
-  headerGradientStart: '#1a1a38',
-  headerGradientEnd: '#141428',
+  gradientStart: '#F5F5F8',
+  gradientEnd: '#FFFFFF',
+  headerGradientStart: '#FFFFFF',
+  headerGradientEnd: '#F5F5F8',
 } as const;
 
 // アニメーション設定
