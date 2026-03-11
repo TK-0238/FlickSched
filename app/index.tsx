@@ -35,6 +35,7 @@ import { TaskActionModal } from '../src/components/TaskActionModal';
 import { FlyAnimation } from '../src/components/FlyAnimation';
 import { Toast } from '../src/components/Toast';
 import { Onboarding } from '../src/components/Onboarding';
+import { QuickAddModal } from '../src/components/QuickAddModal';
 
 import type { TaskTemplate, ScheduledTask } from '../src/types';
 
@@ -81,6 +82,10 @@ export default function HomeScreen() {
 
   // オンボーディング状態
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // クイック追加状態
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
+  const [quickAddMinutes, setQuickAddMinutes] = useState(0);
 
   // 初回起動チェック
   useEffect(() => {
@@ -307,9 +312,67 @@ export default function HomeScreen() {
   }, [markSynced]);
 
   // --- タイムスロットタップ ---
-  const handleTimeSlotPress = useCallback((_minutes: number) => {
-    // 将来: 空き時間タップから直接タスクを追加
+  const handleTimeSlotPress = useCallback((minutes: number) => {
+    // 30分単位にスナップ
+    const snapped = Math.round(minutes / 30) * 30;
+    setQuickAddMinutes(snapped);
+    setQuickAddVisible(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
+
+  // --- クイック追加保存 ---
+  const handleQuickAdd = useCallback((data: {
+    title: string;
+    duration: number;
+    startMinutes: number;
+    color: string;
+    icon: string;
+    memo: string;
+  }) => {
+    const h = Math.floor(data.startMinutes / 60);
+    const m = data.startMinutes % 60;
+    const startTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const endM = data.startMinutes + data.duration;
+    const endH = Math.floor(endM / 60);
+    const endMin = endM % 60;
+    const endTime = `${String(endH).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+
+    const quickTask: ScheduledTask = {
+      id: Date.now().toString(),
+      title: data.title,
+      duration: data.duration,
+      color: data.color,
+      icon: data.icon,
+      date: selectedDate,
+      startTime,
+      endTime,
+      synced: false,
+      memo: data.memo || undefined,
+    };
+
+    // 競合チェック
+    if (hasConflict(quickTask, todayTasks)) {
+      Alert.alert(
+        '⚠️ 時間が重複',
+        'この時間帯には既に予定があります。上書きしますか？',
+        [
+          { text: 'キャンセル', style: 'cancel' },
+          {
+            text: '上書き',
+            onPress: async () => {
+              await scheduleTaskAt(quickTask as any, selectedDate, data.startMinutes);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              setToast({ visible: true, message: `「${data.title}」を追加しました`, type: 'success' });
+            },
+          },
+        ],
+      );
+    } else {
+      scheduleTaskAt(quickTask as any, selectedDate, data.startMinutes);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setToast({ visible: true, message: `「${data.title}」を追加しました`, type: 'success' });
+    }
+  }, [selectedDate, todayTasks, scheduleTaskAt]);
 
   // --- タイムラインの指定分位置にスクロール ---
   const scrollToTime = useCallback((minutes: number) => {
@@ -505,6 +568,14 @@ export default function HomeScreen() {
         <Onboarding
           visible={showOnboarding}
           onClose={handleCloseOnboarding}
+        />
+
+        {/* クイック予定追加モーダル */}
+        <QuickAddModal
+          visible={quickAddVisible}
+          startMinutes={quickAddMinutes}
+          onClose={() => setQuickAddVisible(false)}
+          onSave={handleQuickAdd}
         />
       </View>
     </SafeAreaView>
