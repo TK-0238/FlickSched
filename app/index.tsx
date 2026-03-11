@@ -112,9 +112,14 @@ export default function HomeScreen() {
 
   // タイムラインの画面上の位置を測定
   const handleTimelineLayout = useCallback((event: LayoutChangeEvent) => {
-    event.target.measureInWindow((_x: number, y: number) => {
-      timelineTopRef.current = y;
-    });
+    const { y } = event.nativeEvent.layout;
+    timelineTopRef.current = y;
+    // ネイティブ環境ではmeasureInWindowでより正確に測定
+    if (event.target && typeof (event.target as any).measureInWindow === 'function') {
+      (event.target as any).measureInWindow((_x: number, windowY: number) => {
+        timelineTopRef.current = windowY;
+      });
+    }
   }, []);
 
   // スクロールオフセットを追跡
