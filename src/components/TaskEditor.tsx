@@ -111,7 +111,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
           <View style={styles.handleBar} />
 
           <Text style={styles.modalTitle}>
-            {task ? '付箋を編集' : '新しい付箋'}
+            {task ? 'ルーティンを編集' : '新しいルーティン'}
           </Text>
 
           {/* プレビュー */}
@@ -244,7 +244,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
             )}
 
             {/* 色選択 */}
-            <Text style={styles.sectionLabel}>付箋の色</Text>
+            <Text style={styles.sectionLabel}>ルーティンの色</Text>
             <View style={styles.colorRow}>
               {STICKY_COLORS.map(c => (
                 <Pressable

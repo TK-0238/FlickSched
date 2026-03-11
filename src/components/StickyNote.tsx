@@ -1,4 +1,4 @@
-// 付箋カード — スワイプ並び替え対応
+// ルーティンカード — スワイプ並び替え対応
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';

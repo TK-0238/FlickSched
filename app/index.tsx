@@ -1,4 +1,4 @@
-// メインホーム画面 — タイムライン + 付箋トレイ + ドラッグ配置
+// メインホーム画面 — タイムライン + ルーティントレイ + ドラッグ配置
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
@@ -125,7 +125,7 @@ export default function HomeScreen() {
     return { minutes, timeStr: minutesToTime(minutes) };
   }, []);
 
-  // --- 付箋タップ → タイムラインに飛ぶ ---
+  // --- ルーティンタップ → タイムラインに飛ぶ ---
   const handleTapTask = useCallback(async (template: TaskTemplate) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const scheduled = await scheduleTaskAuto(template);
@@ -151,7 +151,7 @@ export default function HomeScreen() {
     });
   }, [scheduleTaskAuto]);
 
-  // --- 付箋長押し → 編集 ---
+  // --- ルーティン長押し → 編集 ---
   const handleLongPressTask = useCallback((template: TaskTemplate) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setEditingTask(template);
@@ -219,7 +219,7 @@ export default function HomeScreen() {
         type: 'success',
       });
     }
-    // タイムライン外にドロップした場合は何もしない（付箋が元の位置に戻る）
+    // タイムライン外にドロップした場合は何もしない（ルーティンが元の位置に戻る）
   }, [calcTimeFromDragY, scheduleTaskAt, todayTasks, selectedDate]);
 
   // --- 新規タスク作成 ---
@@ -232,10 +232,10 @@ export default function HomeScreen() {
   const handleSaveTask = useCallback(async (taskData: Omit<TaskTemplate, 'id'>) => {
     if (editingTask) {
       await updateTask(editingTask.id, taskData);
-      setToast({ visible: true, message: '付箋を更新しました', type: 'info' });
+      setToast({ visible: true, message: 'ルーティンを更新しました', type: 'info' });
     } else {
       await addTask(taskData);
-      setToast({ visible: true, message: '新しい付箋を作成しました！', type: 'success' });
+      setToast({ visible: true, message: '新しいルーティンを作成しました！', type: 'success' });
     }
   }, [editingTask, updateTask, addTask]);
 
@@ -431,7 +431,7 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* 付箋トレイ */}
+        {/* ルーティントレイ */}
         <StickyTray
           tasks={tasks}
           onTapTask={handleTapTask}
@@ -484,7 +484,7 @@ export default function HomeScreen() {
           onSave={handleSaveTask}
           onDelete={editingTask ? async (id) => {
             await deleteTask(id);
-            setToast({ visible: true, message: '付箋を削除しました', type: 'info' });
+            setToast({ visible: true, message: 'ルーティンを削除しました', type: 'info' });
           } : undefined}
           onClose={() => setEditorVisible(false)}
         />

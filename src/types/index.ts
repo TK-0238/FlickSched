@@ -1,9 +1,9 @@
-// タスクテンプレート — 事前登録する付箋のデータ構造
+// タスクテンプレート — 事前登録するルーティンのデータ構造
 export interface TaskTemplate {
   id: string;
   title: string;           // 例: "会議", "ランチ", "ジム"
   duration: number;        // 分単位 (15, 30, 60, 90...)
-  color: string;           // 付箋の色コード
+  color: string;           // ルーティンの色コード
   icon: string;            // emoji
   defaultStartTime?: string; // デフォルト開始時刻 "09:00"
   category?: string;       // カテゴリ

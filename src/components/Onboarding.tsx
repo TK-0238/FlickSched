@@ -27,7 +27,7 @@ const STEPS = [
   {
     emoji: '👆',
     action: 'タップ',
-    description: '付箋をタップすると空き時間に自動追加',
+    description: 'ルーティンをタップすると空き時間に自動追加',
   },
   {
     emoji: '🖐️',
@@ -37,7 +37,7 @@ const STEPS = [
   {
     emoji: '✏️',
     action: '長押し',
-    description: '付箋を長押しで編集モードに',
+    description: 'ルーティンを長押しで編集モードに',
   },
   {
     emoji: '👈',
@@ -67,7 +67,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ visible, onClose }) => {
           <View style={styles.cardInner}>
             <Text style={styles.title}>⚡ フリスケ</Text>
             <Text style={styles.subtitle}>
-              付箋をタップするだけで{'\n'}予定がサクッと決まる！
+              ルーティンをタップするだけで{'\n'}予定がサクッと決まる！
             </Text>
 
             <View style={styles.stepsContainer}>

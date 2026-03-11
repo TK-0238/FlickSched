@@ -1,4 +1,4 @@
-// 付箋トレイ — 画面下部（スワイプ並び替え対応）
+// ルーティントレイ — 画面下部（スワイプ並び替え対応）
 import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -36,7 +36,7 @@ export function StickyTray({
       />
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.label}>付箋</Text>
+          <Text style={styles.label}>ルーティン</Text>
           <View style={styles.countBadge}>
             <Text style={styles.countText}>{tasks.length}</Text>
           </View>
@@ -83,7 +83,7 @@ export function StickyTray({
             style={styles.addButtonGradient}
           >
             <Text style={styles.addIcon}>＋</Text>
-            <Text style={styles.addLabel}>付箋を作る</Text>
+            <Text style={styles.addLabel}>ルーティンを作る</Text>
           </LinearGradient>
         </Pressable>
       </ScrollView>

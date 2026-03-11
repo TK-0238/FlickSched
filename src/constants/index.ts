@@ -1,6 +1,6 @@
 // アプリ全体の定数
 
-// 付箋の色パレット（モダンなグラデーション風パステル）
+// ルーティンの色パレット（モダンなグラデーション風パステル）
 export const STICKY_COLORS = [
   '#FF6B6B', // コーラル
   '#4ECDC4', // ティール
@@ -76,7 +76,7 @@ export const ANIMATION = {
     stiffness: 150,
     mass: 0.5,
   },
-  FLY_DURATION: 400,        // 付箋が飛んでいくアニメーション時間(ms)
+  FLY_DURATION: 400,        // ルーティンが飛んでいくアニメーション時間(ms)
 } as const;
 
 // サンプルタスク（初回起動時）

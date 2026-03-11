@@ -1,4 +1,4 @@
-// フライアニメーション — 付箋がタイムラインに飛んでいくエフェクト
+// フライアニメーション — ルーティンがタイムラインに飛んでいくエフェクト
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, Dimensions } from 'react-native';
 import Animated, {
@@ -20,7 +20,7 @@ interface Props {
   color: string;
   icon: string;
   title: string;
-  // 開始位置（付箋トレイ内の位置）
+  // 開始位置（ルーティントレイ内の位置）
   fromX: number;
   fromY: number;
   // 終了位置（タイムライン上の位置）
