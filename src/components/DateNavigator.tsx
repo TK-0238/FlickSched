@@ -1,6 +1,6 @@
 // 日付ナビゲーション — モダンなスリムバー
 import React from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants';
 import { formatDateDisplay, getTodayString, getTomorrowString } from '../utils/time';
@@ -27,6 +27,14 @@ export function DateNavigator({ selectedDate, onDateChange, onOpenCalendar }: Pr
     onDateChange(d.toISOString().split('T')[0]);
   };
 
+  const handleDatePress = () => {
+    if (onOpenCalendar) {
+      onOpenCalendar();
+    } else {
+      onDateChange(today);
+    }
+  };
+
   const isToday = selectedDate === today;
 
   return (
@@ -35,16 +43,18 @@ export function DateNavigator({ selectedDate, onDateChange, onOpenCalendar }: Pr
         colors={[COLORS.surfaceLight, COLORS.surface]}
         style={styles.gradient}
       >
-        <Pressable
+        <TouchableOpacity
           onPress={goBack}
-          style={({ pressed }) => [styles.arrowBtn, pressed && { opacity: 0.5 }]}
+          activeOpacity={0.5}
+          style={styles.arrowBtn}
         >
           <Text style={styles.arrow}>‹</Text>
-        </Pressable>
+        </TouchableOpacity>
 
-        <Pressable
-          onPress={() => onOpenCalendar ? onOpenCalendar() : onDateChange(today)}
+        <TouchableOpacity
+          onPress={handleDatePress}
           onLongPress={() => onDateChange(today)}
+          activeOpacity={0.7}
           style={styles.dateSection}
         >
           <Text style={styles.dateText}>
@@ -60,14 +70,19 @@ export function DateNavigator({ selectedDate, onDateChange, onOpenCalendar }: Pr
               <Text style={styles.tomorrowBadgeText}>明日</Text>
             </View>
           )}
-        </Pressable>
+          {/* カレンダーアイコン — タップで月カレンダーを開く */}
+          {onOpenCalendar && (
+            <Text style={styles.calendarIcon}>📅</Text>
+          )}
+        </TouchableOpacity>
 
-        <Pressable
+        <TouchableOpacity
           onPress={goForward}
-          style={({ pressed }) => [styles.arrowBtn, pressed && { opacity: 0.5 }]}
+          activeOpacity={0.5}
+          style={styles.arrowBtn}
         >
           <Text style={styles.arrow}>›</Text>
-        </Pressable>
+        </TouchableOpacity>
       </LinearGradient>
     </View>
   );
@@ -133,5 +148,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: COLORS.success,
+  },
+  calendarIcon: {
+    fontSize: 16,
+    marginLeft: 4,
   },
 });
