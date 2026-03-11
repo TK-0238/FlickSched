@@ -36,6 +36,7 @@ import { FlyAnimation } from '../src/components/FlyAnimation';
 import { Toast } from '../src/components/Toast';
 import { Onboarding } from '../src/components/Onboarding';
 import { QuickAddModal } from '../src/components/QuickAddModal';
+import { MonthCalendar } from '../src/components/MonthCalendar';
 
 import type { TaskTemplate, ScheduledTask } from '../src/types';
 
@@ -46,6 +47,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { tasks, addTask, updateTask, deleteTask, reorderTask } = useTasks();
   const {
+    scheduled,
     todayTasks,
     selectedDate,
     setSelectedDate,
@@ -86,6 +88,9 @@ export default function HomeScreen() {
   // クイック追加状態
   const [quickAddVisible, setQuickAddVisible] = useState(false);
   const [quickAddMinutes, setQuickAddMinutes] = useState(0);
+
+  // 月カレンダー状態
+  const [calendarVisible, setCalendarVisible] = useState(false);
 
   // 初回起動チェック
   useEffect(() => {
@@ -481,6 +486,7 @@ export default function HomeScreen() {
         <DateNavigator
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
+          onOpenCalendar={() => setCalendarVisible(true)}
         />
 
         {/* タイムライン */}
@@ -581,6 +587,15 @@ export default function HomeScreen() {
           startMinutes={quickAddMinutes}
           onClose={() => setQuickAddVisible(false)}
           onSave={handleQuickAdd}
+        />
+
+        {/* 月カレンダーモーダル */}
+        <MonthCalendar
+          visible={calendarVisible}
+          selectedDate={selectedDate}
+          scheduledTasks={scheduled}
+          onSelectDate={setSelectedDate}
+          onClose={() => setCalendarVisible(false)}
         />
       </View>
     </SafeAreaView>

@@ -8,9 +8,10 @@ import { formatDateDisplay, getTodayString, getTomorrowString } from '../utils/t
 interface Props {
   selectedDate: string;
   onDateChange: (date: string) => void;
+  onOpenCalendar?: () => void;
 }
 
-export function DateNavigator({ selectedDate, onDateChange }: Props) {
+export function DateNavigator({ selectedDate, onDateChange, onOpenCalendar }: Props) {
   const today = getTodayString();
   const tomorrow = getTomorrowString();
 
@@ -42,7 +43,8 @@ export function DateNavigator({ selectedDate, onDateChange }: Props) {
         </Pressable>
 
         <Pressable
-          onPress={() => onDateChange(today)}
+          onPress={() => onOpenCalendar ? onOpenCalendar() : onDateChange(today)}
+          onLongPress={() => onDateChange(today)}
           style={styles.dateSection}
         >
           <Text style={styles.dateText}>
