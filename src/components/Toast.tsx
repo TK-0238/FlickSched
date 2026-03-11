@@ -28,9 +28,10 @@ export function Toast({ visible, message, type = 'success', onHide }: Props) {
       // 2秒後に非表示
       translateY.value = withDelay(2000, withSpring(-100));
       opacity.value = withDelay(2000, withTiming(0, { duration: 200 }));
-      setTimeout(onHide, 2500);
+      const timer = setTimeout(onHide, 2500);
+      return () => clearTimeout(timer);
     }
-  }, [visible, message]);
+  }, [visible, message, onHide]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],

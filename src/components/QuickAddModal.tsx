@@ -45,7 +45,8 @@ export function QuickAddModal({ visible, startMinutes, onClose, onSave }: Props)
     if (visible) {
       setTitle('');
       setDuration(60);
-      setTimeout(() => inputRef.current?.focus(), 300);
+      const timer = setTimeout(() => inputRef.current?.focus(), 300);
+      return () => clearTimeout(timer);
     }
   }, [visible]);
 

@@ -81,8 +81,11 @@ export function MonthCalendar({
       const target = startOfMonth(new Date(selectedDate));
       setViewingMonth(target);
       setViewMode('calendar');
-      setTimeout(() => scrollToMonthTab(target), 150);
+      const timer = setTimeout(() => scrollToMonthTab(target), 150);
+      return () => clearTimeout(timer);
     }
+    // scrollToMonthTabはuseCallback([])で安定した参照
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, selectedDate]);
 
   // ── 月タブ一覧（動的拡張） ──

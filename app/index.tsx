@@ -331,7 +331,7 @@ export default function HomeScreen() {
   }, []);
 
   // --- クイック追加保存 ---
-  const handleQuickAdd = useCallback((data: {
+  const handleQuickAdd = useCallback(async (data: {
     title: string;
     duration: number;
     startMinutes: number;
@@ -342,26 +342,19 @@ export default function HomeScreen() {
     const h = Math.floor(data.startMinutes / 60);
     const m = data.startMinutes % 60;
     const startTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    const endM = data.startMinutes + data.duration;
-    const endH = Math.floor(endM / 60);
-    const endMin = endM % 60;
-    const endTime = `${String(endH).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
 
-    const quickTask: ScheduledTask = {
+    // クイック追加用のテンプレートを構築
+    const quickTemplate: TaskTemplate = {
       id: Date.now().toString(),
       title: data.title,
       duration: data.duration,
       color: data.color,
       icon: data.icon,
-      date: selectedDate,
-      startTime,
-      endTime,
-      synced: false,
       memo: data.memo || undefined,
     };
 
-    // 競合チェック
-    if (hasConflict(quickTask, todayTasks)) {
+    // 競合チェック（正しい引数: startTime, duration, tasks, date）
+    if (hasConflict(startTime, data.duration, todayTasks, selectedDate)) {
       Alert.alert(
         '⚠️ 時間が重複',
         'この時間帯には既に予定があります。上書きしますか？',
@@ -370,7 +363,7 @@ export default function HomeScreen() {
           {
             text: '上書き',
             onPress: async () => {
-              await scheduleTaskAt(quickTask as any, selectedDate, data.startMinutes);
+              await scheduleTaskAt(quickTemplate, startTime, selectedDate);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               setToast({ visible: true, message: `「${data.title}」を追加しました`, type: 'success' });
             },
@@ -378,7 +371,7 @@ export default function HomeScreen() {
         ],
       );
     } else {
-      scheduleTaskAt(quickTask as any, selectedDate, data.startMinutes);
+      await scheduleTaskAt(quickTemplate, startTime, selectedDate);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setToast({ visible: true, message: `「${data.title}」を追加しました`, type: 'success' });
     }

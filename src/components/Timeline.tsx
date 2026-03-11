@@ -163,9 +163,10 @@ export function Timeline({
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const yPos = minutesToYPosition(currentMinutes) - 150;
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       ref.current?.scrollTo({ y: Math.max(0, yPos), animated: true });
     }, 300);
+    return () => clearTimeout(timer);
   }, []);
 
   const now = new Date();

@@ -89,6 +89,7 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
 
   const handleSave = () => {
     if (!title.trim()) return;
+    if (duration <= 0) return;
     onSave({
       title: title.trim(),
       duration,
@@ -225,9 +226,11 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
                     value={customMinutes}
                     onChangeText={(v) => {
                       const num = v.replace(/[^0-9]/g, '');
-                      setCustomMinutes(num);
+                      // 59分以下に制限
+                      const clamped = Math.min(parseInt(num || '0'), 59);
+                      setCustomMinutes(clamped > 0 ? String(clamped) : num);
                       const h = parseInt(customHours || '0');
-                      const m = parseInt(num || '0');
+                      const m = clamped;
                       if (h > 0 || m > 0) setDuration(h * 60 + m);
                     }}
                     placeholder="0"
@@ -492,15 +495,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: 'rgba(0,0,0,0.6)',
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    marginBottom: 8,
-    marginTop: 14,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
   input: {
     backgroundColor: COLORS.surfaceLight,

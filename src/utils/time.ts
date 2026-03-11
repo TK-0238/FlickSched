@@ -24,8 +24,10 @@ export function formatDateDisplay(dateStr: string): string {
 
 // "09:00" → 分数（540）
 export function timeToMinutes(time: string): number {
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + m;
+  const parts = time.split(':');
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  return Math.max(0, h * 60 + m);
 }
 
 // 分数 → "09:00"
@@ -128,9 +130,13 @@ export function hasConflict(
   }) || null;
 }
 
-// UUIDの簡易生成
+// UUID生成（衝突耐性向上: タイムスタンプ + カウンタ + ランダム）
+let idCounter = 0;
 export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+  idCounter = (idCounter + 1) % 1000;
+  return Date.now().toString(36)
+    + idCounter.toString(36).padStart(2, '0')
+    + Math.random().toString(36).substr(2, 9);
 }
 
 // 時間の配列を生成（タイムライン描画用）
