@@ -18,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, TIMELINE } from '../constants';
-import { generateTimeSlots, minutesToYPosition, timeToMinutes } from '../utils/time';
+import { generateTimeSlots, minutesToYPosition, timeToMinutes, yPositionToMinutes } from '../utils/time';
 import type { ScheduledTask } from '../types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -181,19 +181,28 @@ export function Timeline({
       onScroll={onScroll}
       scrollEventThrottle={16}
     >
+      {/* タイムライン背景全体のタップ検出 */}
+      <Pressable
+        style={{ position: 'absolute', top: 0, left: 48, right: 0, height: totalHeight }}
+        onPress={(e) => {
+          const y = e.nativeEvent.locationY;
+          const minutes = yPositionToMinutes(y);
+          onTimeSlotPress(minutes);
+        }}
+      />
+
       {/* 時間ラベル + 線 */}
       {timeSlots.map(slot => {
         const y = minutesToYPosition(slot.hour * 60);
-        const isWholeHour = true;
         return (
-          <Pressable
+          <View
             key={slot.label}
-            onPress={() => onTimeSlotPress(slot.hour * 60)}
             style={[styles.timeRow, { top: y }]}
+            pointerEvents="none"
           >
             <Text style={styles.timeLabel}>{slot.label}</Text>
             <View style={styles.timeLine} />
-          </Pressable>
+          </View>
         );
       })}
 
