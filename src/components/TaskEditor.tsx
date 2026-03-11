@@ -338,45 +338,46 @@ export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) 
                 </Pressable>
               ))}
             </View>
-          </ScrollView>
 
-          {/* メモ欄（折りたたみ式） */}
-          <View style={styles.memoSection}>
-            {memoExpanded ? (
-              <>
+            {/* メモ欄（折りたたみ式） */}
+            <View style={styles.memoSection}>
+              {memoExpanded ? (
+                <>
+                  <Pressable
+                    onPress={() => { if (!memo.trim()) setMemoExpanded(false); }}
+                    style={styles.memoHeader}
+                  >
+                    <Text style={styles.sectionLabel}>📝 メモ</Text>
+                    {!memo.trim() && (
+                      <Text style={styles.memoCollapseText}>▲ 閉じる</Text>
+                    )}
+                  </Pressable>
+                  <TextInput
+                    style={styles.memoInput}
+                    value={memo}
+                    onChangeText={setMemo}
+                    placeholder="メモを入力（任意）"
+                    placeholderTextColor={COLORS.textMuted}
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                    autoFocus
+                  />
+                </>
+              ) : (
                 <Pressable
-                  onPress={() => { if (!memo.trim()) setMemoExpanded(false); }}
-                  style={styles.memoHeader}
+                  onPress={() => setMemoExpanded(true)}
+                  style={({ pressed }) => [
+                    styles.memoToggleBtn,
+                    pressed && { opacity: 0.7 },
+                  ]}
                 >
-                  <Text style={styles.sectionLabel}>📝 メモ</Text>
-                  {!memo.trim() && (
-                    <Text style={styles.memoCollapseText}>▲ 閉じる</Text>
-                  )}
+                  <Text style={styles.memoToggleText}>📝 メモを追加</Text>
                 </Pressable>
-                <TextInput
-                  style={styles.memoInput}
-                  value={memo}
-                  onChangeText={setMemo}
-                  placeholder="メモを入力（任意）"
-                  placeholderTextColor={COLORS.textMuted}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                  autoFocus
-                />
-              </>
-            ) : (
-              <Pressable
-                onPress={() => setMemoExpanded(true)}
-                style={({ pressed }) => [
-                  styles.memoToggleBtn,
-                  pressed && { opacity: 0.7 },
-                ]}
-              >
-                <Text style={styles.memoToggleText}>📝 メモを追加</Text>
-              </Pressable>
-            )}
-          </View>
+              )}
+            </View>
+
+          </ScrollView>
 
           {/* ボタン */}
           <View style={styles.buttonRow}>
