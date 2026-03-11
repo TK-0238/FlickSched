@@ -1,5 +1,5 @@
-// 月カレンダーモーダル — 月一覧表示と日付選択（無制限の未来日付に対応、自動拡張）
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+// 月カレンダーモーダル — 年間月グリッド + 日付選択（無制限の未来日付、年ピッカー対応）
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -24,20 +24,29 @@ import type { ScheduledTask } from '../types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CALENDAR_PADDING = 12;
-// コンテナの内側パディング(左右12)を差し引いたグリッド幅
 const GRID_WIDTH = SCREEN_WIDTH - CALENDAR_PADDING * 2 - 24;
 const DAY_CELL_SIZE = Math.floor(GRID_WIDTH / 7);
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
-// 過去方向は固定（2年）、未来方向は動的拡張（境界接近で自動追加）
-const MONTHS_BACK = 24;            // 2年前まで（固定）
-const INITIAL_MONTHS_AHEAD = 36;   // 初期: 3年先まで
-const EXTEND_THRESHOLD = 6;        // 境界6ヶ月以内で自動拡張
-const EXTEND_AMOUNT = 24;          // 2年ずつ拡張
+// 過去方向は固定（2年）、未来方向は動的拡張
+const MONTHS_BACK = 24;
+const INITIAL_MONTHS_AHEAD = 36;
+const EXTEND_THRESHOLD = 6;
+const EXTEND_AMOUNT = 24;
 
-// 月タブ1つあたりの幅（パディング含む）
+// 月タブ
 const TAB_MIN_WIDTH = 52;
 const TAB_GAP = 6;
+
+// 年ピッカーの月グリッド設定（4×3）
+const MONTH_GRID_COLS = 4;
+const MONTH_GRID_GAP = 8;
+const MONTH_CELL_WIDTH = Math.floor((SCREEN_WIDTH - 48 - MONTH_GRID_GAP * (MONTH_GRID_COLS - 1)) / MONTH_GRID_COLS);
+const MONTH_CELL_HEIGHT = 72;
+
+// 年ピッカーで移動可能な年範囲
+const MIN_YEAR_OFFSET = -5;  // 現在から5年前まで
+const MAX_YEAR_OFFSET = 10;  // 現在から10年先まで
 
 interface Props {
   visible: boolean;
@@ -57,11 +66,13 @@ export function MonthCalendar({
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
+  // ── ビューモード: 'calendar'=日付グリッド, 'yearPicker'=年間月グリッド ──
+  const [viewMode, setViewMode] = useState<'calendar' | 'yearPicker'>('calendar');
   const [viewingMonth, setViewingMonth] = useState<Date>(() =>
     startOfMonth(new Date(selectedDate))
   );
+  const [pickerYear, setPickerYear] = useState(now.getFullYear());
   const monthScrollRef = useRef<ScrollView>(null);
-  // 未来方向の動的レンジ（自動拡張対応）
   const [monthsAhead, setMonthsAhead] = useState(INITIAL_MONTHS_AHEAD);
 
   // モーダル表示時に選択中日付の月へジャンプ
@@ -69,11 +80,12 @@ export function MonthCalendar({
     if (visible) {
       const target = startOfMonth(new Date(selectedDate));
       setViewingMonth(target);
+      setViewMode('calendar');
       setTimeout(() => scrollToMonthTab(target), 150);
     }
   }, [visible, selectedDate]);
 
-  // ── 月タブ一覧（2年前〜動的に拡張される未来） ──
+  // ── 月タブ一覧（動的拡張） ──
   const monthTabs = useMemo(() => {
     const base = startOfMonth(now);
     const tabs: Date[] = [];
@@ -83,7 +95,7 @@ export function MonthCalendar({
     return tabs;
   }, [monthsAhead]);
 
-  // ── 日付→タスク数のマップ ──
+  // ── 日付→タスク数マップ ──
   const taskCountMap = useMemo(() => {
     const map = new Map<string, number>();
     scheduledTasks.forEach(t => {
@@ -102,7 +114,18 @@ export function MonthCalendar({
     return set;
   }, [scheduledTasks]);
 
-  // ── 表示月が範囲境界に近づいたら未来方向を自動拡張 ──
+  // ── 月ごとのタスク数マップ（年ピッカー用） ──
+  const monthTaskCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    scheduledTasks.forEach(t => {
+      const d = new Date(t.date);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+    return map;
+  }, [scheduledTasks]);
+
+  // ── 自動拡張（表示月が境界に近づいたら） ──
   useEffect(() => {
     const base = startOfMonth(now);
     const diff = (viewingMonth.getFullYear() - base.getFullYear()) * 12
@@ -112,20 +135,17 @@ export function MonthCalendar({
     }
   }, [viewingMonth, monthsAhead]);
 
-  // ── カレンダーグリッド（6行×7列に統一） ──
+  // ── カレンダーグリッド（6行×7列） ──
   const calendarRows = useMemo(() => {
     const year = viewingMonth.getFullYear();
     const month = viewingMonth.getMonth();
-    const firstDow = getDay(startOfMonth(viewingMonth)); // 0=日曜
+    const firstDow = getDay(startOfMonth(viewingMonth));
     const days = getDaysInMonth(viewingMonth);
 
     const cells: (Date | null)[] = [];
-    // 月初より前の空白セル
     for (let i = 0; i < firstDow; i++) cells.push(null);
-    // 当月の日付
     for (let d = 1; d <= days; d++) cells.push(new Date(year, month, d));
 
-    // 7日ごとに行分割（常に6行にパディング）
     const rows: (Date | null)[][] = [];
     for (let i = 0; i < cells.length; i += 7) {
       const row = cells.slice(i, i + 7);
@@ -138,20 +158,18 @@ export function MonthCalendar({
     return rows;
   }, [viewingMonth]);
 
-  // ── 月タブへのスクロール（O(1)計算） ──
-  const scrollToMonthTab = (month: Date) => {
+  // ── 月タブスクロール（O(1)） ──
+  const scrollToMonthTab = useCallback((month: Date) => {
     const base = startOfMonth(now);
-    // 月の差分からインデックスを直接計算
     const diff = (month.getFullYear() - base.getFullYear()) * 12
       + (month.getMonth() - base.getMonth());
     const idx = diff + MONTHS_BACK;
     const itemW = TAB_MIN_WIDTH + TAB_GAP;
     const scrollX = Math.max(0, idx * itemW - SCREEN_WIDTH / 2 + itemW / 2);
     monthScrollRef.current?.scrollTo({ x: scrollX, animated: true });
-  };
+  }, []);
 
-  // ── 月ナビゲーション ──
-  // 過去方向のみ制限（MONTHS_BACK固定）、未来方向は無制限（自動拡張）
+  // ── 月ナビ ──
   const canGoPrev = useMemo(() => {
     const min = addMonths(startOfMonth(now), -MONTHS_BACK);
     return addMonths(viewingMonth, -1) >= min;
@@ -170,6 +188,35 @@ export function MonthCalendar({
     scrollToMonthTab(next);
   };
 
+  // ── 月タイトルタップ → 年ピッカーモードへ切替 ──
+  const handleMonthTitlePress = () => {
+    if (viewMode === 'calendar') {
+      setPickerYear(viewingMonth.getFullYear());
+      setViewMode('yearPicker');
+    } else {
+      setViewMode('calendar');
+    }
+  };
+
+  // ── 年ピッカーで月を選択 ──
+  const handlePickerMonthSelect = (monthIndex: number) => {
+    const target = new Date(pickerYear, monthIndex, 1);
+    setViewingMonth(target);
+    setViewMode('calendar');
+    // 自動拡張が必要ならトリガー
+    const base = startOfMonth(now);
+    const diff = (pickerYear - base.getFullYear()) * 12
+      + (monthIndex - base.getMonth());
+    if (diff > monthsAhead - EXTEND_THRESHOLD) {
+      setMonthsAhead(prev => Math.max(prev, diff + EXTEND_AMOUNT));
+    }
+    setTimeout(() => scrollToMonthTab(target), 150);
+  };
+
+  // ── 年ピッカーの年ナビ ──
+  const canPickerPrevYear = pickerYear > now.getFullYear() + MIN_YEAR_OFFSET;
+  const canPickerNextYear = pickerYear < now.getFullYear() + MAX_YEAR_OFFSET;
+
   // ── 日付タップ ──
   const handleDayPress = (date: Date) => {
     const y = date.getFullYear();
@@ -181,6 +228,9 @@ export function MonthCalendar({
 
   // ── 今日に戻る ──
   const handleGoToToday = () => {
+    if (viewMode === 'yearPicker') {
+      setViewMode('calendar');
+    }
     onSelectDate(todayStr);
     onClose();
   };
@@ -193,14 +243,132 @@ export function MonthCalendar({
     return `${y}-${m}-${d}`;
   };
 
+  // ── 年ピッカー: 月グリッドのレンダリング ──
+  const renderYearPicker = () => {
+    const months = Array.from({ length: 12 }, (_, i) => i);
+    const rows: number[][] = [];
+    for (let i = 0; i < 12; i += MONTH_GRID_COLS) {
+      rows.push(months.slice(i, i + MONTH_GRID_COLS));
+    }
+
+    return (
+      <View style={styles.yearPickerContainer}>
+        {/* 年ナビゲーション */}
+        <View style={styles.yearNav}>
+          <Pressable
+            onPress={() => canPickerPrevYear && setPickerYear(y => y - 1)}
+            style={[styles.yearArrow, !canPickerPrevYear && styles.yearArrowDisabled]}
+            disabled={!canPickerPrevYear}
+          >
+            <Text style={[styles.yearArrowText, !canPickerPrevYear && styles.yearArrowTextDisabled]}>‹</Text>
+          </Pressable>
+          <Text style={styles.yearTitle}>{pickerYear}年</Text>
+          <Pressable
+            onPress={() => canPickerNextYear && setPickerYear(y => y + 1)}
+            style={[styles.yearArrow, !canPickerNextYear && styles.yearArrowDisabled]}
+            disabled={!canPickerNextYear}
+          >
+            <Text style={[styles.yearArrowText, !canPickerNextYear && styles.yearArrowTextDisabled]}>›</Text>
+          </Pressable>
+        </View>
+
+        {/* 月グリッド（4×3） */}
+        <View style={styles.monthGrid}>
+          {rows.map((row, rowIdx) => (
+            <View key={rowIdx} style={styles.monthGridRow}>
+              {row.map(monthIdx => {
+                const isCurrentMonth = pickerYear === now.getFullYear() && monthIdx === now.getMonth();
+                const isViewingMonth = pickerYear === viewingMonth.getFullYear() && monthIdx === viewingMonth.getMonth();
+                const isPastMonth = new Date(pickerYear, monthIdx, 1) < startOfMonth(now);
+                const key = `${pickerYear}-${monthIdx}`;
+                const hasEvents = monthEventKeys.has(key);
+                const taskCount = monthTaskCountMap.get(key) || 0;
+
+                return (
+                  <Pressable
+                    key={monthIdx}
+                    onPress={() => handlePickerMonthSelect(monthIdx)}
+                    style={({ pressed }) => [
+                      styles.monthCell,
+                      isViewingMonth && styles.monthCellSelected,
+                      isCurrentMonth && !isViewingMonth && styles.monthCellCurrent,
+                      pressed && styles.monthCellPressed,
+                    ]}
+                  >
+                    <Text style={[
+                      styles.monthCellText,
+                      isViewingMonth && styles.monthCellTextSelected,
+                      isCurrentMonth && !isViewingMonth && styles.monthCellTextCurrent,
+                      isPastMonth && !isCurrentMonth && !isViewingMonth && styles.monthCellTextPast,
+                    ]}>
+                      {monthIdx + 1}月
+                    </Text>
+                    {/* イベントインジケーター */}
+                    {hasEvents && (
+                      <View style={styles.monthCellIndicator}>
+                        <View style={[
+                          styles.monthCellDot,
+                          isViewingMonth && styles.monthCellDotSelected,
+                        ]} />
+                        {taskCount > 1 && (
+                          <Text style={[
+                            styles.monthCellCount,
+                            isViewingMonth && styles.monthCellCountSelected,
+                          ]}>
+                            {taskCount}
+                          </Text>
+                        )}
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+
+        {/* 年ジャンプショートカット */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.yearShortcutsContent}
+          style={styles.yearShortcuts}
+        >
+          {Array.from({ length: MAX_YEAR_OFFSET - MIN_YEAR_OFFSET + 1 }, (_, i) => {
+            const year = now.getFullYear() + MIN_YEAR_OFFSET + i;
+            const isActive = year === pickerYear;
+            const isCurrent = year === now.getFullYear();
+            return (
+              <Pressable
+                key={year}
+                onPress={() => setPickerYear(year)}
+                style={[
+                  styles.yearChip,
+                  isActive && styles.yearChipActive,
+                  isCurrent && !isActive && styles.yearChipCurrent,
+                ]}
+              >
+                <Text style={[
+                  styles.yearChipText,
+                  isActive && styles.yearChipTextActive,
+                  isCurrent && !isActive && styles.yearChipTextCurrent,
+                ]}>
+                  {year}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
-        {/* 背景タップで閉じる */}
         <Pressable style={styles.overlayBg} onPress={onClose} />
 
         <View style={styles.container}>
-          {/* ドラッグハンドル */}
           <View style={styles.handle} />
 
           {/* ヘッダー */}
@@ -211,188 +379,189 @@ export function MonthCalendar({
             </Pressable>
           </View>
 
-          {/* 月ナビゲーション（← 2026年3月 →） */}
+          {/* 月ナビゲーション — タイトルタップで年ピッカーへ */}
           <View style={styles.monthNav}>
-            <Pressable
-              onPress={goToPrevMonth}
-              style={[styles.monthArrow, !canGoPrev && styles.monthArrowDisabled]}
-              disabled={!canGoPrev}
-            >
-              <Text style={[styles.monthArrowText, !canGoPrev && styles.monthArrowTextDisabled]}>‹</Text>
-            </Pressable>
-            <Text style={styles.monthTitle}>
-              {format(viewingMonth, 'yyyy年M月', { locale: ja })}
-            </Text>
-            <Pressable
-              onPress={goToNextMonth}
-              style={styles.monthArrow}
-            >
-              <Text style={styles.monthArrowText}>›</Text>
-            </Pressable>
-          </View>
-
-          {/* 月タブ（横スクロール） */}
-          <ScrollView
-            ref={monthScrollRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.monthTabScroll}
-            contentContainerStyle={styles.monthTabContent}
-          >
-            {monthTabs.map((month, i) => {
-              const isViewing = isSameMonth(month, viewingMonth);
-              const isCurrent = isSameMonth(month, now);
-              const key = `${month.getFullYear()}-${month.getMonth()}`;
-              const hasEvents = monthEventKeys.has(key);
-
-              return (
+            {viewMode === 'calendar' ? (
+              <>
                 <Pressable
-                  key={i}
-                  onPress={() => {
-                    setViewingMonth(month);
-                    scrollToMonthTab(month);
-                  }}
-                  style={[
-                    styles.monthTab,
-                    isViewing && styles.monthTabActive,
-                  ]}
+                  onPress={goToPrevMonth}
+                  style={[styles.monthArrow, !canGoPrev && styles.monthArrowDisabled]}
+                  disabled={!canGoPrev}
                 >
-                  <Text
-                    style={[
-                      styles.monthTabText,
-                      isViewing && styles.monthTabTextActive,
-                      isCurrent && !isViewing && styles.monthTabTextCurrent,
-                    ]}
-                  >
-                    {format(month, 'M月')}
-                  </Text>
-                  {/* 年が異なる場合は小さく年表示 */}
-                  {month.getFullYear() !== now.getFullYear() && (
-                    <Text style={[
-                      styles.monthTabYear,
-                      isViewing && styles.monthTabYearActive,
-                    ]}>
-                      {month.getFullYear()}
-                    </Text>
-                  )}
-                  {hasEvents && (
-                    <View
-                      style={[
-                        styles.monthEventDot,
-                        isViewing && styles.monthEventDotActive,
-                      ]}
-                    />
-                  )}
+                  <Text style={[styles.monthArrowText, !canGoPrev && styles.monthArrowTextDisabled]}>‹</Text>
                 </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* 曜日ヘッダー */}
-          <View style={styles.weekHeader}>
-            {WEEKDAYS.map((day, i) => (
-              <View key={i} style={[styles.weekCell, { width: DAY_CELL_SIZE }]}>
-                <Text
-                  style={[
-                    styles.weekText,
-                    i === 0 && { color: '#FF5252' },
-                    i === 6 && { color: '#4488FF' },
-                  ]}
-                >
-                  {day}
+                <Pressable onPress={handleMonthTitlePress} style={styles.monthTitleBtn}>
+                  <Text style={styles.monthTitle}>
+                    {format(viewingMonth, 'yyyy年M月', { locale: ja })}
+                  </Text>
+                  <Text style={styles.monthTitleArrow}>▼</Text>
+                </Pressable>
+                <Pressable onPress={goToNextMonth} style={styles.monthArrow}>
+                  <Text style={styles.monthArrowText}>›</Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable onPress={handleMonthTitlePress} style={styles.monthTitleBtn}>
+                <Text style={styles.monthTitle}>
+                  {format(viewingMonth, 'yyyy年M月', { locale: ja })}
                 </Text>
-              </View>
-            ))}
+                <Text style={styles.monthTitleArrow}>▲</Text>
+              </Pressable>
+            )}
           </View>
 
-          {/* カレンダーグリッド */}
-          <View style={styles.gridContainer}>
-            {calendarRows.map((row, rowIdx) => (
-              <View key={rowIdx} style={styles.gridRow}>
-                {row.map((date, colIdx) => {
-                  if (!date) {
-                    return (
-                      <View
-                        key={`e-${rowIdx}-${colIdx}`}
-                        style={[styles.dayCell, { width: DAY_CELL_SIZE, height: DAY_CELL_SIZE }]}
-                      />
-                    );
-                  }
-
-                  const ds = dateToStr(date);
-                  const isSelected = ds === selectedDate;
-                  const isToday = ds === todayStr;
-                  const taskCount = taskCountMap.get(ds) || 0;
-                  const dow = getDay(date);
-                  const isPast =
-                    date <
-                    new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          {viewMode === 'yearPicker' ? (
+            // ── 年ピッカーモード: 月グリッド ──
+            renderYearPicker()
+          ) : (
+            // ── カレンダーモード: 日付グリッド ──
+            <>
+              {/* 月タブ（横スクロール） */}
+              <ScrollView
+                ref={monthScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.monthTabScroll}
+                contentContainerStyle={styles.monthTabContent}
+              >
+                {monthTabs.map((month, i) => {
+                  const isViewing = isSameMonth(month, viewingMonth);
+                  const isCurrent = isSameMonth(month, now);
+                  const key = `${month.getFullYear()}-${month.getMonth()}`;
+                  const hasEvents = monthEventKeys.has(key);
 
                   return (
                     <Pressable
-                      key={ds}
-                      onPress={() => handleDayPress(date)}
-                      style={({ pressed }) => [
-                        styles.dayCell,
-                        { width: DAY_CELL_SIZE, height: DAY_CELL_SIZE },
-                        pressed && styles.dayCellPressed,
+                      key={i}
+                      onPress={() => {
+                        setViewingMonth(month);
+                        scrollToMonthTab(month);
+                      }}
+                      style={[
+                        styles.monthTab,
+                        isViewing && styles.monthTabActive,
                       ]}
                     >
-                      <View
+                      <Text
                         style={[
-                          styles.dayCircle,
-                          isSelected && styles.dayCircleSelected,
-                          isToday && !isSelected && styles.dayCircleToday,
+                          styles.monthTabText,
+                          isViewing && styles.monthTabTextActive,
+                          isCurrent && !isViewing && styles.monthTabTextCurrent,
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.dayText,
-                            isSelected && styles.dayTextSelected,
-                            isToday && !isSelected && styles.dayTextToday,
-                            dow === 0 && !isSelected && { color: '#FF5252' },
-                            dow === 6 && !isSelected && { color: '#4488FF' },
-                            isPast &&
-                              !isSelected &&
-                              !isToday &&
-                              styles.dayTextPast,
-                          ]}
-                        >
-                          {date.getDate()}
+                        {format(month, 'M月')}
+                      </Text>
+                      {month.getFullYear() !== now.getFullYear() && (
+                        <Text style={[
+                          styles.monthTabYear,
+                          isViewing && styles.monthTabYearActive,
+                        ]}>
+                          {month.getFullYear()}
                         </Text>
-                      </View>
-                      {/* タスクドット（最大3つ） */}
-                      {taskCount > 0 && (
-                        <View style={styles.dotRow}>
-                          {Array.from({ length: Math.min(taskCount, 3) }).map(
-                            (_, j) => (
-                              <View
-                                key={j}
-                                style={[
-                                  styles.dot,
-                                  isSelected && styles.dotSelected,
-                                ]}
-                              />
-                            )
-                          )}
-                          {taskCount > 3 && (
-                            <Text
-                              style={[
-                                styles.dotMore,
-                                isSelected && styles.dotMoreSelected,
-                              ]}
-                            >
-                              +
-                            </Text>
-                          )}
-                        </View>
+                      )}
+                      {hasEvents && (
+                        <View
+                          style={[
+                            styles.monthEventDot,
+                            isViewing && styles.monthEventDotActive,
+                          ]}
+                        />
                       )}
                     </Pressable>
                   );
                 })}
+              </ScrollView>
+
+              {/* 曜日ヘッダー */}
+              <View style={styles.weekHeader}>
+                {WEEKDAYS.map((day, i) => (
+                  <View key={i} style={[styles.weekCell, { width: DAY_CELL_SIZE }]}>
+                    <Text
+                      style={[
+                        styles.weekText,
+                        i === 0 && { color: '#FF5252' },
+                        i === 6 && { color: '#4488FF' },
+                      ]}
+                    >
+                      {day}
+                    </Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
+
+              {/* カレンダーグリッド */}
+              <View style={styles.gridContainer}>
+                {calendarRows.map((row, rowIdx) => (
+                  <View key={rowIdx} style={styles.gridRow}>
+                    {row.map((date, colIdx) => {
+                      if (!date) {
+                        return (
+                          <View
+                            key={`e-${rowIdx}-${colIdx}`}
+                            style={[styles.dayCell, { width: DAY_CELL_SIZE, height: DAY_CELL_SIZE }]}
+                          />
+                        );
+                      }
+
+                      const ds = dateToStr(date);
+                      const isSelected = ds === selectedDate;
+                      const isToday = ds === todayStr;
+                      const taskCount = taskCountMap.get(ds) || 0;
+                      const dow = getDay(date);
+                      const isPast =
+                        date < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+                      return (
+                        <Pressable
+                          key={ds}
+                          onPress={() => handleDayPress(date)}
+                          style={({ pressed }) => [
+                            styles.dayCell,
+                            { width: DAY_CELL_SIZE, height: DAY_CELL_SIZE },
+                            pressed && styles.dayCellPressed,
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.dayCircle,
+                              isSelected && styles.dayCircleSelected,
+                              isToday && !isSelected && styles.dayCircleToday,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.dayText,
+                                isSelected && styles.dayTextSelected,
+                                isToday && !isSelected && styles.dayTextToday,
+                                dow === 0 && !isSelected && { color: '#FF5252' },
+                                dow === 6 && !isSelected && { color: '#4488FF' },
+                                isPast && !isSelected && !isToday && styles.dayTextPast,
+                              ]}
+                            >
+                              {date.getDate()}
+                            </Text>
+                          </View>
+                          {taskCount > 0 && (
+                            <View style={styles.dotRow}>
+                              {Array.from({ length: Math.min(taskCount, 3) }).map((_, j) => (
+                                <View
+                                  key={j}
+                                  style={[styles.dot, isSelected && styles.dotSelected]}
+                                />
+                              ))}
+                              {taskCount > 3 && (
+                                <Text style={[styles.dotMore, isSelected && styles.dotMoreSelected]}>+</Text>
+                              )}
+                            </View>
+                          )}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
 
           {/* 今日に戻るボタン */}
           <Pressable
@@ -417,7 +586,6 @@ export function MonthCalendar({
 
 // ───── スタイル ─────
 const styles = StyleSheet.create({
-  // オーバーレイ
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -426,8 +594,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
-
-  // コンテナ（ボトムシート）
   container: {
     backgroundColor: COLORS.background,
     borderTopLeftRadius: 24,
@@ -439,8 +605,6 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 20,
   },
-
-  // ドラッグハンドル
   handle: {
     width: 36,
     height: 4,
@@ -507,15 +671,179 @@ const styles = StyleSheet.create({
   monthArrowTextDisabled: {
     color: COLORS.textMuted,
   },
+  // 月タイトル（タップ可能、▼付き）
+  monthTitleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+  },
   monthTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: COLORS.text,
-    minWidth: 120,
-    textAlign: 'center',
+  },
+  monthTitleArrow: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    marginTop: 1,
   },
 
-  // 月タブ
+  // ── 年ピッカー ──
+  yearPickerContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  yearNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    gap: 20,
+  },
+  yearArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  yearArrowDisabled: {
+    opacity: 0.3,
+  },
+  yearArrowText: {
+    fontSize: 26,
+    color: COLORS.primary,
+    fontWeight: '300',
+    marginTop: -2,
+  },
+  yearArrowTextDisabled: {
+    color: COLORS.textMuted,
+  },
+  yearTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: COLORS.text,
+    minWidth: 80,
+    textAlign: 'center',
+    letterSpacing: 1,
+  },
+
+  // 月グリッド（4×3）
+  monthGrid: {
+    gap: MONTH_GRID_GAP,
+    paddingVertical: 8,
+  },
+  monthGridRow: {
+    flexDirection: 'row',
+    gap: MONTH_GRID_GAP,
+    justifyContent: 'center',
+  },
+  monthCell: {
+    width: MONTH_CELL_WIDTH,
+    height: MONTH_CELL_HEIGHT,
+    borderRadius: 14,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  monthCellSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  monthCellCurrent: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryGlow,
+  },
+  monthCellPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.96 }],
+  },
+  monthCellText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  monthCellTextSelected: {
+    color: '#FFFFFF',
+  },
+  monthCellTextCurrent: {
+    color: COLORS.primary,
+    fontWeight: '800',
+  },
+  monthCellTextPast: {
+    color: COLORS.textMuted,
+    opacity: 0.6,
+  },
+  monthCellIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 4,
+  },
+  monthCellDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.primary,
+  },
+  monthCellDotSelected: {
+    backgroundColor: 'rgba(255,255,255,0.8)',
+  },
+  monthCellCount: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  monthCellCountSelected: {
+    color: 'rgba(255,255,255,0.8)',
+  },
+
+  // 年ジャンプショートカット
+  yearShortcuts: {
+    marginTop: 4,
+    maxHeight: 38,
+  },
+  yearShortcutsContent: {
+    gap: 6,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  yearChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: COLORS.surface,
+  },
+  yearChipActive: {
+    backgroundColor: COLORS.primary,
+  },
+  yearChipCurrent: {
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+  },
+  yearChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  yearChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  yearChipTextCurrent: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+
+  // ── 月タブ（横スクロール） ──
   monthTabScroll: {
     maxHeight: 48,
     marginHorizontal: 8,
@@ -570,7 +898,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
 
-  // 曜日ヘッダー
+  // ── 曜日ヘッダー ──
   weekHeader: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -588,7 +916,7 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
 
-  // カレンダーグリッド
+  // ── カレンダーグリッド ──
   gridContainer: {
     paddingHorizontal: CALENDAR_PADDING,
     paddingVertical: 4,
@@ -662,7 +990,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
 
-  // 今日に戻るボタン
+  // ── 今日に戻るボタン ──
   todayBtn: {
     marginHorizontal: 20,
     marginTop: 8,
