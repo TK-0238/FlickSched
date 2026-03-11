@@ -27,7 +27,7 @@ interface Props {
 const SWAP_THRESHOLD = 45;
 const DIRECTION_THRESHOLD = 12;
 
-export function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, onDragEnd, onSwapLeft, onSwapRight }: Props) {
+export const StickyNote = React.memo(function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, onDragEnd, onSwapLeft, onSwapRight }: Props) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
@@ -152,7 +152,7 @@ export function StickyNote({ task, onTap, onLongPress, onDragStart, onDragMove, 
       </Animated.View>
     </GestureDetector>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

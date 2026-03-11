@@ -34,7 +34,7 @@ interface Props {
 }
 
 // スワイプ削除可能なタスクブロック（モダンデザイン）
-function SwipeableTaskBlock({
+const SwipeableTaskBlock = React.memo(function SwipeableTaskBlock({
   task,
   taskY,
   taskHeight,
@@ -143,9 +143,9 @@ function SwipeableTaskBlock({
       </GestureDetector>
     </View>
   );
-}
+});
 
-export function Timeline({
+export const Timeline = React.memo(function Timeline({
   tasks,
   onTaskPress,
   onTaskLongPress,
@@ -234,7 +234,7 @@ export function Timeline({
       })}
     </ScrollView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

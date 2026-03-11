@@ -1,25 +1,35 @@
 // 日付・時間関連のユーティリティ
-import { format, addMinutes, parse, isAfter, isBefore, isSameDay } from 'date-fns';
-import { ja } from 'date-fns/locale';
 import { TIMELINE } from '../constants';
 import type { ScheduledTask, TimeSlot } from '../types';
 
+// 日本語曜日名
+const WEEKDAY_JA = ['日', '月', '火', '水', '木', '金', '土'] as const;
+
+// Dateを "yyyy-MM-dd" 形式に変換
+function formatDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 // 現在の日付を "2026-03-10" 形式で取得
 export function getTodayString(): string {
-  return format(new Date(), 'yyyy-MM-dd');
+  return formatDateStr(new Date());
 }
 
 // 明日の日付を取得
 export function getTomorrowString(): string {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  return format(tomorrow, 'yyyy-MM-dd');
+  return formatDateStr(tomorrow);
 }
 
 // 日付表示用のフォーマット "3月10日（月）"
 export function formatDateDisplay(dateStr: string): string {
-  const date = parse(dateStr, 'yyyy-MM-dd', new Date());
-  return format(date, 'M月d日（E）', { locale: ja });
+  const parts = dateStr.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  return `${d.getMonth() + 1}月${d.getDate()}日（${WEEKDAY_JA[d.getDay()]}）`;
 }
 
 // "09:00" → 分数（540）

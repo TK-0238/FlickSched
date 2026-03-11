@@ -10,17 +10,14 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  startOfMonth,
-  getDaysInMonth,
-  getDay,
-  addMonths,
-  format,
-  isSameMonth,
-} from 'date-fns';
-import { ja } from 'date-fns/locale';
 import { COLORS } from '../constants';
 import type { ScheduledTask } from '../types';
+
+// ネイティブDate日付ヘルパー
+const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+const getDaysInMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+const addMonths = (d: Date, n: number) => { const r = new Date(d); r.setMonth(r.getMonth() + n); return r; };
+const isSameMonth = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CALENDAR_PADDING = 12;
@@ -98,34 +95,21 @@ export function MonthCalendar({
     return tabs;
   }, [monthsAhead]);
 
-  // ── 日付→タスク数マップ ──
-  const taskCountMap = useMemo(() => {
-    const map = new Map<string, number>();
+  // ── scheduledTasks統合解析（1回のループで3つのマップを生成） ──
+  const { taskCountMap, monthEventKeys, monthTaskCountMap } = useMemo(() => {
+    const countMap = new Map<string, number>();
+    const eventKeys = new Set<string>();
+    const monthCounts = new Map<string, number>();
     scheduledTasks.forEach(t => {
-      map.set(t.date, (map.get(t.date) || 0) + 1);
-    });
-    return map;
-  }, [scheduledTasks]);
-
-  // ── 月ごとのイベント有無 ──
-  const monthEventKeys = useMemo(() => {
-    const set = new Set<string>();
-    scheduledTasks.forEach(t => {
+      // 日付ごとのタスク数
+      countMap.set(t.date, (countMap.get(t.date) || 0) + 1);
+      // 月キー
       const d = new Date(t.date);
-      set.add(`${d.getFullYear()}-${d.getMonth()}`);
+      const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
+      eventKeys.add(monthKey);
+      monthCounts.set(monthKey, (monthCounts.get(monthKey) || 0) + 1);
     });
-    return set;
-  }, [scheduledTasks]);
-
-  // ── 月ごとのタスク数マップ（年ピッカー用） ──
-  const monthTaskCountMap = useMemo(() => {
-    const map = new Map<string, number>();
-    scheduledTasks.forEach(t => {
-      const d = new Date(t.date);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
-      map.set(key, (map.get(key) || 0) + 1);
-    });
-    return map;
+    return { taskCountMap: countMap, monthEventKeys: eventKeys, monthTaskCountMap: monthCounts };
   }, [scheduledTasks]);
 
   // ── 自動拡張（表示月が境界に近づいたら） ──
@@ -142,7 +126,7 @@ export function MonthCalendar({
   const calendarRows = useMemo(() => {
     const year = viewingMonth.getFullYear();
     const month = viewingMonth.getMonth();
-    const firstDow = getDay(startOfMonth(viewingMonth));
+    const firstDow = startOfMonth(viewingMonth).getDay();
     const days = getDaysInMonth(viewingMonth);
 
     const cells: (Date | null)[] = [];
@@ -395,7 +379,7 @@ export function MonthCalendar({
                 </Pressable>
                 <Pressable onPress={handleMonthTitlePress} style={styles.monthTitleBtn}>
                   <Text style={styles.monthTitle}>
-                    {format(viewingMonth, 'yyyy年M月', { locale: ja })}
+                    {viewingMonth.getFullYear() + '年' + (viewingMonth.getMonth() + 1) + '月'}
                   </Text>
                   <Text style={styles.monthTitleArrow}>▼</Text>
                 </Pressable>
@@ -406,7 +390,7 @@ export function MonthCalendar({
             ) : (
               <Pressable onPress={handleMonthTitlePress} style={styles.monthTitleBtn}>
                 <Text style={styles.monthTitle}>
-                  {format(viewingMonth, 'yyyy年M月', { locale: ja })}
+                  {viewingMonth.getFullYear() + '年' + (viewingMonth.getMonth() + 1) + '月'}
                 </Text>
                 <Text style={styles.monthTitleArrow}>▲</Text>
               </Pressable>
@@ -452,7 +436,7 @@ export function MonthCalendar({
                           isCurrent && !isViewing && styles.monthTabTextCurrent,
                         ]}
                       >
-                        {format(month, 'M月')}
+                        {(month.getMonth() + 1) + '月'}
                       </Text>
                       {month.getFullYear() !== now.getFullYear() && (
                         <Text style={[
@@ -510,7 +494,7 @@ export function MonthCalendar({
                       const isSelected = ds === selectedDate;
                       const isToday = ds === todayStr;
                       const taskCount = taskCountMap.get(ds) || 0;
-                      const dow = getDay(date);
+                      const dow = date.getDay();
                       const isPast =
                         date < new Date(now.getFullYear(), now.getMonth(), now.getDate());
 

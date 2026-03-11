@@ -1,5 +1,5 @@
 // メインホーム画面 — タイムライン + ルーティントレイ + ドラッグ配置
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -395,13 +395,20 @@ export default function HomeScreen() {
     setToast({ visible: true, message: `${task.icon} ${task.title} を削除しました`, type: 'info' });
   }, [removeTask]);
 
+  // --- 未同期タスク数（メモ化） ---
+  const unsyncedCount = useMemo(
+    () => todayTasks.filter(t => !t.synced).length,
+    [todayTasks]
+  );
+
   // --- 一括カレンダー同期（Apple + Google両対応）---
   const handleSyncAll = useCallback(async () => {
-    const unsyncedTasks = todayTasks.filter(t => !t.synced);
-    if (unsyncedTasks.length === 0) {
+    if (unsyncedCount === 0) {
       setToast({ visible: true, message: '同期するタスクがありません', type: 'info' });
       return;
     }
+
+    const unsyncedTasks = todayTasks.filter(t => !t.synced);
 
     const calSettings = await loadCalendarSettings();
     if (!calSettings.appleCalendarEnabled && !calSettings.googleCalendarEnabled) {
@@ -466,8 +473,8 @@ export default function HomeScreen() {
                 style={({ pressed }) => [styles.syncAllBtn, pressed && { opacity: 0.6 }]}
               >
                 <Text style={styles.syncAllText}>
-                  {todayTasks.filter(t => !t.synced).length > 0
-                    ? `📅 ${todayTasks.filter(t => !t.synced).length}件`
+                  {unsyncedCount > 0
+                    ? `📅 ${unsyncedCount}件`
                     : '✓ 同期済'}
                 </Text>
               </Pressable>

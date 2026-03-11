@@ -394,9 +394,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.danger,
   },
-  btnPressed: {
-    opacity: 0.7,
-  },
   calendarItem: {
     flexDirection: 'row',
     alignItems: 'center',

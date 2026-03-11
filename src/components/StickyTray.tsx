@@ -18,7 +18,7 @@ interface Props {
   onReorder?: (id: string, direction: 'left' | 'right') => void;
 }
 
-export function StickyTray({
+export const StickyTray = React.memo(function StickyTray({
   tasks,
   onTapTask,
   onLongPressTask,
@@ -89,7 +89,7 @@ export function StickyTray({
       </ScrollView>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
