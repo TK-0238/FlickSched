@@ -1,18 +1,18 @@
 {
   "expo": {
-    "name": "フリスケ",
-    "slug": "flicksched",
+    "name": "サクヨテ",
+    "slug": "sakuyote",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "scheme": "flicksched",
+    "scheme": "sakuyote",
     "splash": {
       "backgroundColor": "#1a1a2e"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.flicksched.app",
+      "bundleIdentifier": "com.sakuyote.app",
       "infoPlist": {
         "NSCalendarsUsageDescription": "カレンダーに予定を追加するためにアクセスが必要です",
         "NSCalendarsFullAccessUsageDescription": "カレンダーに予定を追加するためにアクセスが必要です"
@@ -22,7 +22,7 @@
       "adaptiveIcon": {
         "backgroundColor": "#1a1a2e"
       },
-      "package": "com.flicksched.app",
+      "package": "com.sakuyote.app",
       "permissions": [
         "READ_CALENDAR",
         "WRITE_CALENDAR"

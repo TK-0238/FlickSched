@@ -65,7 +65,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ visible, onClose }) => {
           style={styles.card}
         >
           <View style={styles.cardInner}>
-            <Text style={styles.title}>⚡ フリスケ</Text>
+            <Text style={styles.title}>⚡ サクヨテ</Text>
             <Text style={styles.subtitle}>
               ルーティンをタップするだけで{'\n'}予定がサクッと決まる！
             </Text>

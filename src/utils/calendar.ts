@@ -70,7 +70,7 @@ export async function addToAppleCalendar(
       startDate,
       endDate,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      notes: 'フリスケから追加',
+      notes: 'サクヨテから追加',
     });
 
     return eventId;
@@ -138,7 +138,7 @@ export async function addToGoogleCalendar(
         },
         body: JSON.stringify({
           summary: `${task.icon} ${task.title}`,
-          description: 'フリスケから追加',
+          description: 'サクヨテから追加',
           start: { dateTime: startDateTime, timeZone },
           end: { dateTime: endDateTime, timeZone },
         }),

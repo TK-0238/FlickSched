@@ -392,7 +392,7 @@ export default function HomeScreen() {
           >
             <Text style={styles.settingsBtnText}>⚙ 設定</Text>
           </Pressable>
-          <Text style={styles.appTitle}>⚡ フリスケ</Text>
+          <Text style={styles.appTitle}>⚡ サクヨテ</Text>
           <View style={styles.headerRight}>
             {todayTasks.length > 0 && (
               <Pressable

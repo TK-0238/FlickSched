@@ -269,7 +269,7 @@ export default function SettingsScreen() {
 
         <Text style={styles.sectionLabel}>アプリ情報</Text>
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>⚡ フリスケ v1.0.0</Text>
+          <Text style={styles.infoTitle}>⚡ サクヨテ v1.0.0</Text>
           <Text style={styles.infoSubtext}>
             予定を立てるのがめんどくさい人のための{'\n'}
             ワンタップスケジューリングアプリ
