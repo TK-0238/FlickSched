@@ -1,5 +1,5 @@
 // スケジュール管理フック — 配置済みタスクの管理
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../constants';
 import { generateId, calcEndTime, findNextAvailableSlot, getTodayString } from '../utils/time';
@@ -7,6 +7,8 @@ import type { ScheduledTask, TaskTemplate } from '../types';
 
 export function useSchedule() {
   const [scheduled, setScheduled] = useState<ScheduledTask[]>([]);
+  // 非同期保存中でも常に最新の配列を参照し、連続操作で更新を失わないようにする
+  const scheduledRef = useRef<ScheduledTask[]>([]);
   const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [loading, setLoading] = useState(true);
 
@@ -19,7 +21,11 @@ export function useSchedule() {
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.SCHEDULED);
       if (stored) {
-        setScheduled(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          scheduledRef.current = parsed;
+          setScheduled(parsed);
+        }
       }
     } catch (e) {
       console.error('スケジュール読み込みエラー:', e);
@@ -31,8 +37,10 @@ export function useSchedule() {
   // 保存
   const saveSchedule = useCallback(async (items: ScheduledTask[]) => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.SCHEDULED, JSON.stringify(items));
+      // UIと参照値を先に更新することで、直後の操作も最新状態を基準にできる
+      scheduledRef.current = items;
       setScheduled(items);
+      await AsyncStorage.setItem(STORAGE_KEYS.SCHEDULED, JSON.stringify(items));
     } catch (e) {
       console.error('スケジュール保存エラー:', e);
     }
@@ -47,7 +55,7 @@ export function useSchedule() {
     const startTime = findNextAvailableSlot(
       targetDate,
       template.duration,
-      scheduled,
+      scheduledRef.current,
       template.defaultStartTime
     );
     const endTime = calcEndTime(startTime, template.duration);
@@ -66,7 +74,7 @@ export function useSchedule() {
       synced: false,
     };
 
-    const updated = [...scheduled, newTask];
+    const updated = [...scheduledRef.current, newTask];
     await saveSchedule(updated);
     return newTask;
   }, [scheduled, selectedDate, saveSchedule]);
@@ -94,14 +102,14 @@ export function useSchedule() {
       synced: false,
     };
 
-    const updated = [...scheduled, newTask];
+    const updated = [...scheduledRef.current, newTask];
     await saveSchedule(updated);
     return newTask;
   }, [scheduled, selectedDate, saveSchedule]);
 
   // 配置済みタスクの時間変更
   const moveTask = useCallback(async (taskId: string, newStartTime: string) => {
-    const updated = scheduled.map(t => {
+    const updated = scheduledRef.current.map(t => {
       if (t.id === taskId) {
         return {
           ...t,
@@ -117,13 +125,13 @@ export function useSchedule() {
 
   // スケジュールからタスク削除
   const removeTask = useCallback(async (taskId: string) => {
-    const updated = scheduled.filter(t => t.id !== taskId);
+    const updated = scheduledRef.current.filter(t => t.id !== taskId);
     await saveSchedule(updated);
   }, [scheduled, saveSchedule]);
 
   // 同期状態を更新
   const markSynced = useCallback(async (taskId: string, calendarEventId: string) => {
-    const updated = scheduled.map(t => {
+    const updated = scheduledRef.current.map(t => {
       if (t.id === taskId) {
         return { ...t, synced: true, calendarEventId };
       }
