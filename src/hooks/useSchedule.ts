@@ -9,6 +9,8 @@ export function useSchedule() {
   const [scheduled, setScheduled] = useState<ScheduledTask[]>([]);
   // 非同期保存中でも常に最新の配列を参照し、連続操作で更新を失わないようにする
   const scheduledRef = useRef<ScheduledTask[]>([]);
+  // 永続化を直列化し、連続操作時に古い書き込みが最新状態を上書きする競合を防ぐ
+  const persistQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [loading, setLoading] = useState(true);
 
@@ -40,7 +42,10 @@ export function useSchedule() {
       // UIと参照値を先に更新することで、直後の操作も最新状態を基準にできる
       scheduledRef.current = items;
       setScheduled(items);
-      await AsyncStorage.setItem(STORAGE_KEYS.SCHEDULED, JSON.stringify(items));
+      persistQueueRef.current = persistQueueRef.current
+        .catch(() => undefined)
+        .then(() => AsyncStorage.setItem(STORAGE_KEYS.SCHEDULED, JSON.stringify(items)));
+      await persistQueueRef.current;
     } catch (e) {
       console.error('スケジュール保存エラー:', e);
     }
