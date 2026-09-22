@@ -27,6 +27,11 @@ jobs:
         continue-on-error: true
         run: npx tsc --noEmit
 
+      - name: Unit tests
+        id: unit_tests
+        continue-on-error: true
+        run: npx jest --runInBand tests/time.test.js
+
       - name: Expo dependency compatibility
         id: expo_check
         continue-on-error: true
@@ -64,6 +69,7 @@ jobs:
             fi
           }
           check "TypeScript" "${{ steps.typecheck.outcome }}"
+          check "Unit tests" "${{ steps.unit_tests.outcome }}"
           check "Expo dependency compatibility" "${{ steps.expo_check.outcome }}"
           check "Expo doctor" "${{ steps.expo_doctor.outcome }}"
           check "iOS bundle" "${{ steps.bundle_ios.outcome }}"
