@@ -284,14 +284,19 @@ export default function HomeScreen() {
   const handleSyncCalendar = useCallback(async (task: ScheduledTask) => {
     try {
       const calSettings = await loadCalendarSettings();
-      let synced = false;
+      const enabledTargets = [
+        calSettings.appleCalendarEnabled,
+        calSettings.googleCalendarEnabled && !!calSettings.googleAccessToken,
+      ].filter(Boolean).length;
+      let successCount = 0;
+      let lastEventId: string | null = null;
 
       // Appleカレンダー
       if (calSettings.appleCalendarEnabled) {
         const eventId = await addToAppleCalendar(task);
         if (eventId) {
-          await markSynced(task.id, eventId);
-          synced = true;
+          successCount++;
+          lastEventId = eventId;
         }
       }
 
@@ -299,9 +304,14 @@ export default function HomeScreen() {
       if (calSettings.googleCalendarEnabled && calSettings.googleAccessToken) {
         const eventId = await addToGoogleCalendar(task);
         if (eventId) {
-          await markSynced(task.id, eventId);
-          synced = true;
+          successCount++;
+          lastEventId = eventId;
         }
+      }
+
+      const synced = enabledTargets > 0 && successCount === enabledTargets;
+      if (synced && lastEventId) {
+        await markSynced(task.id, lastEventId);
       }
 
       if (synced) {
@@ -431,18 +441,30 @@ export default function HomeScreen() {
     let successCount = 0;
     for (const task of unsyncedTasks) {
       try {
-        let eventId: string | null = null;
+        const enabledTargets = [
+          calSettings.appleCalendarEnabled,
+          calSettings.googleCalendarEnabled && !!calSettings.googleAccessToken,
+        ].filter(Boolean).length;
+        let syncedTargets = 0;
+        let lastEventId: string | null = null;
 
         if (calSettings.appleCalendarEnabled) {
-          eventId = await addToAppleCalendar(task);
+          const eventId = await addToAppleCalendar(task);
+          if (eventId) {
+            syncedTargets++;
+            lastEventId = eventId;
+          }
         }
         if (calSettings.googleCalendarEnabled && calSettings.googleAccessToken) {
           const gEventId = await addToGoogleCalendar(task);
-          if (gEventId) eventId = gEventId;
+          if (gEventId) {
+            syncedTargets++;
+            lastEventId = gEventId;
+          }
         }
 
-        if (eventId) {
-          await markSynced(task.id, eventId);
+        if (enabledTargets > 0 && syncedTargets === enabledTargets && lastEventId) {
+          await markSynced(task.id, lastEventId);
           successCount++;
         }
       } catch (e) {
