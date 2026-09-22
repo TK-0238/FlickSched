@@ -1,0 +1,136 @@
+const {
+  calcEndTime,
+  findNextAvailableSlot,
+  generateTimeSlots,
+  hasConflict,
+  minutesToTime,
+  minutesToYPosition,
+  timeToMinutes,
+  yPositionToMinutes,
+} = require('../src/utils/time');
+
+describe('time utilities', () => {
+  test('converts between HH:mm and minutes', () => {
+    expect(timeToMinutes('09:30')).toBe(570);
+    expect(minutesToTime(570)).toBe('09:30');
+    expect(timeToMinutes('invalid')).toBe(0);
+  });
+
+  test('wraps end time across midnight without losing duration semantics', () => {
+    expect(calcEndTime('23:30', 60)).toBe('00:30');
+    expect(calcEndTime('22:45', 180)).toBe('01:45');
+  });
+
+  test('converts and snaps timeline positions', () => {
+    expect(minutesToYPosition(60)).toBe(80);
+    expect(yPositionToMinutes(100)).toBe(90);
+    expect(yPositionToMinutes(-100)).toBe(0);
+    expect(yPositionToMinutes(99999)).toBe(1410);
+  });
+
+  test('detects overlaps but allows adjacent tasks', () => {
+    const existing = [{
+      id: 'a',
+      templateId: 't',
+      title: 'existing',
+      date: '2099-01-01',
+      startTime: '09:00',
+      endTime: '10:00',
+      duration: 60,
+      color: '#fff',
+      icon: 'x',
+      synced: false,
+    }];
+
+    expect(hasConflict('09:30', 30, existing, '2099-01-01')?.id).toBe('a');
+    expect(hasConflict('10:00', 30, existing, '2099-01-01')).toBeNull();
+    expect(hasConflict('09:30', 30, existing, '2099-01-02')).toBeNull();
+    expect(hasConflict('09:30', 30, existing, '2099-01-01', 'a')).toBeNull();
+  });
+
+  test('detects overnight conflicts on both affected dates', () => {
+    const overnight = [{
+      id: 'overnight',
+      templateId: 't',
+      title: 'overnight',
+      date: '2099-01-01',
+      startTime: '23:30',
+      endTime: '00:30',
+      duration: 60,
+      color: '#fff',
+      icon: 'x',
+      synced: false,
+    }];
+
+    expect(hasConflict('23:45', 15, overnight, '2099-01-01')?.id).toBe('overnight');
+    expect(hasConflict('00:00', 15, overnight, '2099-01-02')?.id).toBe('overnight');
+    expect(findNextAvailableSlot('2099-01-02', 30, overnight, '00:00')).toBe('00:30');
+  });
+
+  test('finds the next free slot from a preferred time', () => {
+    const existing = [{
+      id: 'a',
+      templateId: 't',
+      title: 'existing',
+      date: '2099-01-01',
+      startTime: '09:00',
+      endTime: '10:00',
+      duration: 60,
+      color: '#fff',
+      icon: 'x',
+      synced: false,
+    }];
+
+    expect(findNextAvailableSlot('2099-01-01', 60, existing, '09:00')).toBe('10:00');
+    expect(findNextAvailableSlot('2099-01-01', 30, [], '14:30')).toBe('14:30');
+  });
+
+  test('generates a complete 24-hour timeline', () => {
+    const slots = generateTimeSlots();
+    expect(slots).toHaveLength(24);
+    expect(slots[0]).toEqual({ hour: 0, minute: 0, label: '00:00' });
+    expect(slots[23]).toEqual({ hour: 23, minute: 0, label: '23:00' });
+  });
+
+  test('handles midnight and end-of-day minute boundaries', () => {
+    expect(minutesToTime(0)).toBe('00:00');
+    expect(minutesToTime(1439)).toBe('23:59');
+    expect(calcEndTime('23:59', 1)).toBe('00:00');
+  });
+
+  test('detects overnight conflicts across a year boundary', () => {
+    const overnight = [{
+      id: 'year-boundary',
+      templateId: 't',
+      title: 'overnight',
+      date: '2099-12-31',
+      startTime: '23:30',
+      endTime: '00:30',
+      duration: 60,
+      color: '#fff',
+      icon: 'x',
+      synced: false,
+    }];
+
+    expect(hasConflict('00:00', 30, overnight, '2100-01-01')?.id).toBe('year-boundary');
+    expect(hasConflict('00:30', 30, overnight, '2100-01-01')).toBeNull();
+  });
+
+  test('searches earlier in the day when no later preferred slot is free', () => {
+    const blocked = [{
+      id: 'blocked',
+      templateId: 't',
+      title: 'blocked',
+      date: '2099-01-01',
+      startTime: '09:00',
+      endTime: '00:00',
+      duration: 15 * 60,
+      color: '#fff',
+      icon: 'x',
+      synced: false,
+    }];
+
+    expect(findNextAvailableSlot('2099-01-01', 60, blocked, '09:00')).toBe('00:00');
+  });
+
+});

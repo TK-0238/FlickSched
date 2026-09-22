@@ -107,14 +107,21 @@ export const StickyNote = React.memo(function StickyNote({ task, onTap, onLongPr
         runOnJS(onDragEnd)(task, e.absoluteY);
       }
     })
-    .onFinalize(() => {
+    .onFinalize((_, success) => {
       if (isDragging.value) {
+        const dir = dragDirection.value;
         isDragging.value = false;
         translateX.value = withSpring(0, { damping: 15 });
         translateY.value = withSpring(0, { damping: 15 });
         scale.value = withSpring(1, { damping: 12 });
         zIdx.value = 1;
         dragDirection.value = 0;
+
+        // OS側のジェスチャー競合などでPanがキャンセルされた場合も、
+        // ドラッグプレビューを確実に閉じる。
+        if (!success && dir === 2 && onDragEnd) {
+          runOnJS(onDragEnd)(task, Number.NEGATIVE_INFINITY);
+        }
       }
     });
 

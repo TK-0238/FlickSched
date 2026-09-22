@@ -51,7 +51,8 @@ export function QuickAddModal({ visible, startMinutes, onClose, onSave }: Props)
   }, [visible]);
 
   const endMinutes = startMinutes + duration;
-  const endTimeStr = minutesToTimeStr(Math.min(endMinutes, 24 * 60));
+  const crossesMidnight = endMinutes >= 24 * 60;
+  const endTimeStr = minutesToTimeStr(endMinutes % (24 * 60));
 
   const handleSave = () => {
     if (!title.trim()) return;
@@ -82,7 +83,7 @@ export function QuickAddModal({ visible, startMinutes, onClose, onSave }: Props)
               <View style={styles.header}>
                 <Text style={styles.headerTitle}>📌 予定を追加</Text>
                 <Text style={styles.timeLabel}>
-                  {minutesToTimeStr(startMinutes)} 〜 {endTimeStr}
+                  {minutesToTimeStr(startMinutes)} 〜 {crossesMidnight ? '翌日 ' : ''}{endTimeStr}
                 </Text>
               </View>
 

@@ -62,6 +62,8 @@ export default function HomeScreen() {
 
   // タイムラインのレイアウト情報（ドラッグ→時間変換用）
   const timelineTopRef = useRef(0);
+  const timelineHeightRef = useRef(0);
+  const timelineWrapperRef = useRef<View>(null);
   const timelineScrollOffsetRef = useRef(0);
 
   // モーダル状態
@@ -80,7 +82,11 @@ export default function HomeScreen() {
   });
 
   // トースト状態
-  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as const });
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'info' | 'error' }>({
+    visible: false,
+    message: '',
+    type: 'success',
+  });
 
   // オンボーディング状態
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -117,12 +123,16 @@ export default function HomeScreen() {
 
   // タイムラインの画面上の位置を測定
   const handleTimelineLayout = useCallback((event: LayoutChangeEvent) => {
-    const { y } = event.nativeEvent.layout;
+    const { y, height } = event.nativeEvent.layout;
+    // WebなどmeasureInWindowが使えない環境では親基準のlayout値をフォールバックにする
     timelineTopRef.current = y;
-    // ネイティブ環境ではmeasureInWindowでより正確に測定
-    if (event.target && typeof (event.target as any).measureInWindow === 'function') {
-      (event.target as any).measureInWindow((_x: number, windowY: number) => {
+    timelineHeightRef.current = height;
+
+    const node = timelineWrapperRef.current as any;
+    if (node && typeof node.measureInWindow === 'function') {
+      node.measureInWindow((_x: number, windowY: number, _width: number, windowHeight: number) => {
         timelineTopRef.current = windowY;
+        timelineHeightRef.current = windowHeight;
       });
     }
   }, []);
@@ -197,20 +207,21 @@ export default function HomeScreen() {
     setDragPreview(prev => ({ ...prev, visible: false }));
 
     const result = calcTimeFromDragY(absoluteY);
-    if (result && absoluteY < timelineTopRef.current + SCREEN_HEIGHT * 0.6) {
+    const timelineBottom = timelineTopRef.current + timelineHeightRef.current;
+    if (result && absoluteY <= timelineBottom) {
       // 重複チェック
-      const conflict = hasConflict(result.timeStr, template.duration, todayTasks, selectedDate);
+      const conflict = hasConflict(result.timeStr, template.duration, scheduled, selectedDate);
       if (conflict) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         Alert.alert(
           '⚠️ 時間が重複しています',
-          `${result.timeStr}には「${conflict.title}」(${conflict.startTime}〜${conflict.endTime})が入っています。\n上書きして配置しますか？`,
+          `${result.timeStr}には「${conflict.title}」(${conflict.startTime}〜${conflict.endTime})が入っています。\n重複したまま配置しますか？`,
           [
             { text: 'キャンセル', style: 'cancel' },
             {
               text: '配置する',
               onPress: async () => {
-                const scheduled = await scheduleTaskAt(template, result.timeStr);
+                await scheduleTaskAt(template, result.timeStr);
                 scrollToTime(result.minutes);
                 setToast({
                   visible: true,
@@ -226,7 +237,7 @@ export default function HomeScreen() {
 
       // 重複なし → そのまま配置
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const scheduled = await scheduleTaskAt(template, result.timeStr);
+      await scheduleTaskAt(template, result.timeStr);
       scrollToTime(result.minutes);
       setToast({
         visible: true,
@@ -235,7 +246,7 @@ export default function HomeScreen() {
       });
     }
     // タイムライン外にドロップした場合は何もしない（ルーティンが元の位置に戻る）
-  }, [calcTimeFromDragY, scheduleTaskAt, todayTasks, selectedDate]);
+  }, [calcTimeFromDragY, scheduleTaskAt, scheduled, selectedDate]);
 
   // --- 新規タスク作成 ---
   const handleAddNew = useCallback(() => {
@@ -273,14 +284,19 @@ export default function HomeScreen() {
   const handleSyncCalendar = useCallback(async (task: ScheduledTask) => {
     try {
       const calSettings = await loadCalendarSettings();
-      let synced = false;
+      const enabledTargets = [
+        calSettings.appleCalendarEnabled,
+        calSettings.googleCalendarEnabled && !!calSettings.googleAccessToken,
+      ].filter(Boolean).length;
+      let successCount = 0;
+      let lastEventId: string | null = null;
 
       // Appleカレンダー
       if (calSettings.appleCalendarEnabled) {
         const eventId = await addToAppleCalendar(task);
         if (eventId) {
-          await markSynced(task.id, eventId);
-          synced = true;
+          successCount++;
+          lastEventId = eventId;
         }
       }
 
@@ -288,9 +304,14 @@ export default function HomeScreen() {
       if (calSettings.googleCalendarEnabled && calSettings.googleAccessToken) {
         const eventId = await addToGoogleCalendar(task);
         if (eventId) {
-          await markSynced(task.id, eventId);
-          synced = true;
+          successCount++;
+          lastEventId = eventId;
         }
+      }
+
+      const synced = enabledTargets > 0 && successCount === enabledTargets;
+      if (synced && lastEventId) {
+        await markSynced(task.id, lastEventId);
       }
 
       if (synced) {
@@ -354,14 +375,14 @@ export default function HomeScreen() {
     };
 
     // 競合チェック（正しい引数: startTime, duration, tasks, date）
-    if (hasConflict(startTime, data.duration, todayTasks, selectedDate)) {
+    if (hasConflict(startTime, data.duration, scheduled, selectedDate)) {
       Alert.alert(
         '⚠️ 時間が重複',
-        'この時間帯には既に予定があります。上書きしますか？',
+        'この時間帯には既に予定があります。重複したまま追加しますか？',
         [
           { text: 'キャンセル', style: 'cancel' },
           {
-            text: '上書き',
+            text: '追加',
             onPress: async () => {
               await scheduleTaskAt(quickTemplate, startTime, selectedDate);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -375,7 +396,7 @@ export default function HomeScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setToast({ visible: true, message: `「${data.title}」を追加しました`, type: 'success' });
     }
-  }, [selectedDate, todayTasks, scheduleTaskAt]);
+  }, [selectedDate, scheduled, scheduleTaskAt]);
 
   // --- タイムラインの指定分位置にスクロール ---
   const scrollToTime = useCallback((minutes: number) => {
@@ -420,18 +441,30 @@ export default function HomeScreen() {
     let successCount = 0;
     for (const task of unsyncedTasks) {
       try {
-        let eventId: string | null = null;
+        const enabledTargets = [
+          calSettings.appleCalendarEnabled,
+          calSettings.googleCalendarEnabled && !!calSettings.googleAccessToken,
+        ].filter(Boolean).length;
+        let syncedTargets = 0;
+        let lastEventId: string | null = null;
 
         if (calSettings.appleCalendarEnabled) {
-          eventId = await addToAppleCalendar(task);
+          const eventId = await addToAppleCalendar(task);
+          if (eventId) {
+            syncedTargets++;
+            lastEventId = eventId;
+          }
         }
         if (calSettings.googleCalendarEnabled && calSettings.googleAccessToken) {
           const gEventId = await addToGoogleCalendar(task);
-          if (gEventId) eventId = gEventId;
+          if (gEventId) {
+            syncedTargets++;
+            lastEventId = gEventId;
+          }
         }
 
-        if (eventId) {
-          await markSynced(task.id, eventId);
+        if (enabledTargets > 0 && syncedTargets === enabledTargets && lastEventId) {
+          await markSynced(task.id, lastEventId);
           successCount++;
         }
       } catch (e) {
@@ -491,11 +524,13 @@ export default function HomeScreen() {
 
         {/* タイムライン */}
         <View
+          ref={timelineWrapperRef}
           style={styles.timelineWrapper}
           onLayout={handleTimelineLayout}
         >
           <Timeline
             tasks={todayTasks}
+            selectedDate={selectedDate}
             onTaskPress={handleScheduledTaskPress}
             onTaskLongPress={handleScheduledTaskLongPress}
             onTimeSlotPress={handleTimeSlotPress}
