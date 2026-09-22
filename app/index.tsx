@@ -62,6 +62,8 @@ export default function HomeScreen() {
 
   // タイムラインのレイアウト情報（ドラッグ→時間変換用）
   const timelineTopRef = useRef(0);
+  const timelineHeightRef = useRef(0);
+  const timelineWrapperRef = useRef<View>(null);
   const timelineScrollOffsetRef = useRef(0);
 
   // モーダル状態
@@ -121,12 +123,16 @@ export default function HomeScreen() {
 
   // タイムラインの画面上の位置を測定
   const handleTimelineLayout = useCallback((event: LayoutChangeEvent) => {
-    const { y } = event.nativeEvent.layout;
+    const { y, height } = event.nativeEvent.layout;
+    // WebなどmeasureInWindowが使えない環境では親基準のlayout値をフォールバックにする
     timelineTopRef.current = y;
-    // ネイティブ環境ではmeasureInWindowでより正確に測定
-    if (event.target && typeof (event.target as any).measureInWindow === 'function') {
-      (event.target as any).measureInWindow((_x: number, windowY: number) => {
+    timelineHeightRef.current = height;
+
+    const node = timelineWrapperRef.current as any;
+    if (node && typeof node.measureInWindow === 'function') {
+      node.measureInWindow((_x: number, windowY: number, _width: number, windowHeight: number) => {
         timelineTopRef.current = windowY;
+        timelineHeightRef.current = windowHeight;
       });
     }
   }, []);
@@ -201,7 +207,8 @@ export default function HomeScreen() {
     setDragPreview(prev => ({ ...prev, visible: false }));
 
     const result = calcTimeFromDragY(absoluteY);
-    if (result && absoluteY < timelineTopRef.current + SCREEN_HEIGHT * 0.6) {
+    const timelineBottom = timelineTopRef.current + timelineHeightRef.current;
+    if (result && absoluteY <= timelineBottom) {
       // 重複チェック
       const conflict = hasConflict(result.timeStr, template.duration, todayTasks, selectedDate);
       if (conflict) {
@@ -495,6 +502,7 @@ export default function HomeScreen() {
 
         {/* タイムライン */}
         <View
+          ref={timelineWrapperRef}
           style={styles.timelineWrapper}
           onLayout={handleTimelineLayout}
         >
