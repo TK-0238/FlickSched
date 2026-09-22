@@ -10,7 +10,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -23,19 +23,50 @@ jobs:
         run: npm ci
 
       - name: TypeScript
+        id: typecheck
+        continue-on-error: true
         run: npx tsc --noEmit
 
       - name: Expo dependency compatibility
+        id: expo_check
+        continue-on-error: true
         run: npx expo install --check
 
       - name: Expo doctor
+        id: expo_doctor
+        continue-on-error: true
         run: npx --yes expo-doctor@latest
 
       - name: Bundle iOS
+        id: bundle_ios
+        continue-on-error: true
         run: npx expo export --platform ios --output-dir dist-ios
 
       - name: Bundle Android
+        id: bundle_android
+        continue-on-error: true
         run: npx expo export --platform android --output-dir dist-android
 
       - name: Bundle Web
+        id: bundle_web
+        continue-on-error: true
         run: npx expo export --platform web --output-dir dist-web
+
+      - name: Verify all checks passed
+        if: always()
+        shell: bash
+        run: |
+          failures=0
+          check() {
+            if [ "$2" != "success" ]; then
+              echo "::error::$1 failed (outcome: $2)"
+              failures=1
+            fi
+          }
+          check "TypeScript" "${{ steps.typecheck.outcome }}"
+          check "Expo dependency compatibility" "${{ steps.expo_check.outcome }}"
+          check "Expo doctor" "${{ steps.expo_doctor.outcome }}"
+          check "iOS bundle" "${{ steps.bundle_ios.outcome }}"
+          check "Android bundle" "${{ steps.bundle_android.outcome }}"
+          check "Web bundle" "${{ steps.bundle_web.outcome }}"
+          exit "$failures"
