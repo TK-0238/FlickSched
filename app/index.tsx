@@ -80,7 +80,11 @@ export default function HomeScreen() {
   });
 
   // トースト状態
-  const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'info' | 'error' }>({\n    visible: false,\n    message: '',\n    type: 'success',\n  });
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'info' | 'error' }>({
+    visible: false,
+    message: '',
+    type: 'success',
+  });
 
   // オンボーディング状態
   const [showOnboarding, setShowOnboarding] = useState(false);
