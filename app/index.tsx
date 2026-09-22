@@ -221,7 +221,7 @@ export default function HomeScreen() {
             {
               text: '配置する',
               onPress: async () => {
-                const scheduled = await scheduleTaskAt(template, result.timeStr);
+                await scheduleTaskAt(template, result.timeStr);
                 scrollToTime(result.minutes);
                 setToast({
                   visible: true,
@@ -237,7 +237,7 @@ export default function HomeScreen() {
 
       // 重複なし → そのまま配置
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const scheduled = await scheduleTaskAt(template, result.timeStr);
+      await scheduleTaskAt(template, result.timeStr);
       scrollToTime(result.minutes);
       setToast({
         visible: true,
