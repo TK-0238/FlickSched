@@ -9,6 +9,8 @@ export function useTasks() {
   const [tasks, setTasks] = useState<TaskTemplate[]>([]);
   // 保存待ちの間も最新状態を参照し、連続追加・編集・並び替えを取りこぼさない
   const tasksRef = useRef<TaskTemplate[]>([]);
+  // 永続化を直列化し、連続操作時に古い書き込みが最新状態を上書きする競合を防ぐ
+  const persistQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [loading, setLoading] = useState(true);
 
   // 初回読み込み
@@ -52,7 +54,10 @@ export function useTasks() {
     try {
       tasksRef.current = newTasks;
       setTasks(newTasks);
-      await AsyncStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(newTasks));
+      persistQueueRef.current = persistQueueRef.current
+        .catch(() => undefined)
+        .then(() => AsyncStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(newTasks)));
+      await persistQueueRef.current;
     } catch (e) {
       console.error('タスク保存エラー:', e);
     }
