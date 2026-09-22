@@ -32,7 +32,7 @@ interface Props {
 export function TaskEditor({ visible, task, onSave, onDelete, onClose }: Props) {
   const [title, setTitle] = useState('');
   const [duration, setDuration] = useState(60);
-  const [color, setColor] = useState(STICKY_COLORS[0]);
+  const [color, setColor] = useState<string>(STICKY_COLORS[0]);
   const [icon, setIcon] = useState('💼');
   const [defaultStartTime, setDefaultStartTime] = useState('');
   const [customMode, setCustomMode] = useState(false);
