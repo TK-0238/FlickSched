@@ -29,7 +29,7 @@ interface Props {
   onTaskLongPress: (task: ScheduledTask) => void;
   onTimeSlotPress: (minutes: number) => void;
   onSwipeDelete?: (task: ScheduledTask) => void;
-  scrollViewRef?: React.RefObject<ScrollView>;
+  scrollViewRef?: React.RefObject<ScrollView | null>;
   onScroll?: (event: any) => void;
 }
 
