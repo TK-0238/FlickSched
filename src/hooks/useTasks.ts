@@ -28,7 +28,7 @@ export function useTasks() {
           duration: s.duration,
           color: s.color,
           icon: s.icon,
-          defaultStartTime: s.defaultStartTime,
+          defaultStartTime: 'defaultStartTime' in s ? s.defaultStartTime : undefined,
         }));
         await AsyncStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(samples));
         setTasks(samples);
