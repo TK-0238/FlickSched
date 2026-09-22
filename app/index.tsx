@@ -215,7 +215,7 @@ export default function HomeScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         Alert.alert(
           '⚠️ 時間が重複しています',
-          `${result.timeStr}には「${conflict.title}」(${conflict.startTime}〜${conflict.endTime})が入っています。\n上書きして配置しますか？`,
+          `${result.timeStr}には「${conflict.title}」(${conflict.startTime}〜${conflict.endTime})が入っています。\n重複したまま配置しますか？`,
           [
             { text: 'キャンセル', style: 'cancel' },
             {
@@ -368,11 +368,11 @@ export default function HomeScreen() {
     if (hasConflict(startTime, data.duration, scheduled, selectedDate)) {
       Alert.alert(
         '⚠️ 時間が重複',
-        'この時間帯には既に予定があります。上書きしますか？',
+        'この時間帯には既に予定があります。重複したまま追加しますか？',
         [
           { text: 'キャンセル', style: 'cancel' },
           {
-            text: '上書き',
+            text: '追加',
             onPress: async () => {
               await scheduleTaskAt(quickTemplate, startTime, selectedDate);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
