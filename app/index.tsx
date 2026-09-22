@@ -210,7 +210,7 @@ export default function HomeScreen() {
     const timelineBottom = timelineTopRef.current + timelineHeightRef.current;
     if (result && absoluteY <= timelineBottom) {
       // 重複チェック
-      const conflict = hasConflict(result.timeStr, template.duration, todayTasks, selectedDate);
+      const conflict = hasConflict(result.timeStr, template.duration, scheduled, selectedDate);
       if (conflict) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         Alert.alert(
@@ -246,7 +246,7 @@ export default function HomeScreen() {
       });
     }
     // タイムライン外にドロップした場合は何もしない（ルーティンが元の位置に戻る）
-  }, [calcTimeFromDragY, scheduleTaskAt, todayTasks, selectedDate]);
+  }, [calcTimeFromDragY, scheduleTaskAt, scheduled, selectedDate]);
 
   // --- 新規タスク作成 ---
   const handleAddNew = useCallback(() => {
@@ -365,7 +365,7 @@ export default function HomeScreen() {
     };
 
     // 競合チェック（正しい引数: startTime, duration, tasks, date）
-    if (hasConflict(startTime, data.duration, todayTasks, selectedDate)) {
+    if (hasConflict(startTime, data.duration, scheduled, selectedDate)) {
       Alert.alert(
         '⚠️ 時間が重複',
         'この時間帯には既に予定があります。上書きしますか？',
@@ -386,7 +386,7 @@ export default function HomeScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setToast({ visible: true, message: `「${data.title}」を追加しました`, type: 'success' });
     }
-  }, [selectedDate, todayTasks, scheduleTaskAt]);
+  }, [selectedDate, scheduled, scheduleTaskAt]);
 
   // --- タイムラインの指定分位置にスクロール ---
   const scrollToTime = useCallback((minutes: number) => {
