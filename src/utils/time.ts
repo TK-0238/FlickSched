@@ -66,6 +66,24 @@ export function minutesToYPosition(minutes: number): number {
   return (minutes / 60) * TIMELINE.HOUR_HEIGHT;
 }
 
+// YYYY-MM-DD と HH:mm を、タイムゾーンに依存しない連続した「絶対分」に変換する。
+// これにより日をまたぐ予定も正しく重複判定できる。
+function absoluteMinutes(date: string, time: string): number {
+  const [year, month, day] = date.split('-').map(Number);
+  const dayIndex = Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
+  return dayIndex * 24 * 60 + timeToMinutes(time);
+}
+
+function overlaps(
+  start: number,
+  end: number,
+  task: ScheduledTask
+): boolean {
+  const taskStart = absoluteMinutes(task.date, task.startTime);
+  const taskEnd = taskStart + task.duration;
+  return start < taskEnd && end > taskStart;
+}
+
 // 指定日の空き時間を見つける（次の空きスロット）
 export function findNextAvailableSlot(
   date: string,
@@ -73,9 +91,8 @@ export function findNextAvailableSlot(
   scheduled: ScheduledTask[],
   preferredStartTime?: string
 ): string {
-  const dayTasks = scheduled
-    .filter(t => t.date === date)
-    .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+  // 前日から日をまたいでいる予定も含め、全予定との衝突を確認する
+  const dayBase = absoluteMinutes(date, '00:00');
 
   // 優先開始時刻がある場合はそこから、なければ現在時刻から
   let searchStart: number;
@@ -93,12 +110,9 @@ export function findNextAvailableSlot(
 
   // 空きスロットを探索
   for (let start = searchStart; start + duration <= 24 * 60; start += TIMELINE.SLOT_INTERVAL) {
-    const end = start + duration;
-    const conflict = dayTasks.some(task => {
-      const taskStart = timeToMinutes(task.startTime);
-      const taskEnd = timeToMinutes(task.endTime);
-      return start < taskEnd && end > taskStart;
-    });
+    const candidateStart = dayBase + start;
+    const candidateEnd = candidateStart + duration;
+    const conflict = scheduled.some(task => overlaps(candidateStart, candidateEnd, task));
     if (!conflict) {
       return minutesToTime(start);
     }
@@ -106,12 +120,9 @@ export function findNextAvailableSlot(
 
   // 0:00から再検索（searchStartより前）
   for (let start = 0; start < searchStart && start + duration <= 24 * 60; start += TIMELINE.SLOT_INTERVAL) {
-    const end = start + duration;
-    const conflict = dayTasks.some(task => {
-      const taskStart = timeToMinutes(task.startTime);
-      const taskEnd = timeToMinutes(task.endTime);
-      return start < taskEnd && end > taskStart;
-    });
+    const candidateStart = dayBase + start;
+    const candidateEnd = candidateStart + duration;
+    const conflict = scheduled.some(task => overlaps(candidateStart, candidateEnd, task));
     if (!conflict) {
       return minutesToTime(start);
     }
@@ -129,14 +140,11 @@ export function hasConflict(
   date: string,
   excludeId?: string
 ): ScheduledTask | null {
-  const startMin = timeToMinutes(startTime);
+  const startMin = absoluteMinutes(date, startTime);
   const endMin = startMin + duration;
   return scheduled.find(task => {
-    if (task.date !== date) return false;
     if (excludeId && task.id === excludeId) return false;
-    const taskStart = timeToMinutes(task.startTime);
-    const taskEnd = timeToMinutes(task.endTime);
-    return startMin < taskEnd && endMin > taskStart;
+    return overlaps(startMin, endMin, task);
   }) || null;
 }
 
