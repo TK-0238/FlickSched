@@ -508,6 +508,7 @@ export default function HomeScreen() {
         >
           <Timeline
             tasks={todayTasks}
+            selectedDate={selectedDate}
             onTaskPress={handleScheduledTaskPress}
             onTaskLongPress={handleScheduledTaskLongPress}
             onTimeSlotPress={handleTimeSlotPress}
