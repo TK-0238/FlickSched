@@ -30,7 +30,7 @@ jobs:
       - name: Unit tests
         id: unit_tests
         continue-on-error: true
-        run: npx jest --runInBand tests/time.test.js
+        run: npx jest --runInBand
 
       - name: Expo dependency compatibility
         id: expo_check
