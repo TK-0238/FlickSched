@@ -18,13 +18,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, TIMELINE } from '../constants';
-import { generateTimeSlots, minutesToYPosition, timeToMinutes, yPositionToMinutes } from '../utils/time';
+import { generateTimeSlots, getTodayString, minutesToYPosition, timeToMinutes, yPositionToMinutes } from '../utils/time';
 import type { ScheduledTask } from '../types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface Props {
   tasks: ScheduledTask[];
+  selectedDate: string;
   onTaskPress: (task: ScheduledTask) => void;
   onTaskLongPress: (task: ScheduledTask) => void;
   onTimeSlotPress: (minutes: number) => void;
@@ -147,6 +148,7 @@ const SwipeableTaskBlock = React.memo(function SwipeableTaskBlock({
 
 export const Timeline = React.memo(function Timeline({
   tasks,
+  selectedDate,
   onTaskPress,
   onTaskLongPress,
   onTimeSlotPress,
@@ -207,12 +209,14 @@ export const Timeline = React.memo(function Timeline({
         );
       })}
 
-      {/* 現在時刻インジケーター */}
-      <View style={[styles.nowIndicator, { top: nowY }]}>
-        <View style={styles.nowDot} />
-        <View style={styles.nowLine} />
-        <View style={styles.nowGlow} />
-      </View>
+      {/* 現在時刻インジケーターは「今日」を表示している時だけ出す */}
+      {selectedDate === getTodayString() && (
+        <View style={[styles.nowIndicator, { top: nowY }]}>
+          <View style={styles.nowDot} />
+          <View style={styles.nowLine} />
+          <View style={styles.nowGlow} />
+        </View>
+      )}
 
       {/* 配置済みタスク */}
       {tasks.map(task => {
