@@ -13,6 +13,30 @@ const GOOGLE_SCOPES = ['https://www.googleapis.com/auth/calendar.events'];
 
 export { GOOGLE_CLIENT_ID, GOOGLE_AUTH_URL, GOOGLE_TOKEN_URL, GOOGLE_SCOPES };
 
+// 予定の日付・開始時刻・所要時間から、日をまたぐケースも含めて正しいDate範囲を作る
+function getTaskDateRange(task: ScheduledTask): { startDate: Date; endDate: Date } {
+  const [year, month, day] = task.date.split('-').map(Number);
+  const [startH, startM] = task.startTime.split(':').map(Number);
+  const values = [year, month, day, startH, startM, task.duration];
+  if (!values.every(Number.isFinite) || task.duration <= 0) {
+    throw new Error('Invalid scheduled task date/time');
+  }
+
+  const startDate = new Date(year, month - 1, day, startH, startM, 0, 0);
+  const endDate = new Date(startDate.getTime() + task.duration * 60_000);
+  return { startDate, endDate };
+}
+
+function formatLocalDateTime(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const h = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  const s = String(date.getSeconds()).padStart(2, '0');
+  return `${y}-${m}-${d}T${h}:${min}:${s}`;
+}
+
 // カレンダー権限リクエスト
 export async function requestCalendarPermission(): Promise<boolean> {
   const { status } = await Calendar.requestCalendarPermissionsAsync();
@@ -22,15 +46,17 @@ export async function requestCalendarPermission(): Promise<boolean> {
 // デフォルトカレンダーIDを取得
 export async function getDefaultCalendarId(): Promise<string | null> {
   const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+  // 読み取り専用カレンダーを作成先に選ぶと createEventAsync が失敗する
+  const writableCalendars = calendars.filter(c => c.allowsModifications !== false);
 
   if (Platform.OS === 'ios') {
-    const defaultCal = calendars.find(
+    const defaultCal = writableCalendars.find(
       c => c.source?.name === 'iCloud' || c.source?.name === 'Default'
     );
-    return defaultCal?.id || calendars[0]?.id || null;
+    return defaultCal?.id || writableCalendars[0]?.id || null;
   } else {
-    const defaultCal = calendars.find(c => c.isPrimary);
-    return defaultCal?.id || calendars[0]?.id || null;
+    const defaultCal = writableCalendars.find(c => c.isPrimary);
+    return defaultCal?.id || writableCalendars[0]?.id || null;
   }
 }
 
@@ -58,12 +84,7 @@ export async function addToAppleCalendar(
     const targetCalendarId = calendarId || await getDefaultCalendarId();
     if (!targetCalendarId) return null;
 
-    const [year, month, day] = task.date.split('-').map(Number);
-    const [startH, startM] = task.startTime.split(':').map(Number);
-    const [endH, endM] = task.endTime.split(':').map(Number);
-
-    const startDate = new Date(year, month - 1, day, startH, startM);
-    const endDate = new Date(year, month - 1, day, endH, endM);
+    const { startDate, endDate } = getTaskDateRange(task);
 
     const eventId = await Calendar.createEventAsync(targetCalendarId, {
       title: `${task.icon} ${task.title}`,
@@ -124,8 +145,9 @@ export async function addToGoogleCalendar(
     const token = accessToken || await getGoogleToken();
     if (!token) return null;
 
-    const startDateTime = `${task.date}T${task.startTime}:00`;
-    const endDateTime = `${task.date}T${task.endTime}:00`;
+    const { startDate, endDate } = getTaskDateRange(task);
+    const startDateTime = formatLocalDateTime(startDate);
+    const endDateTime = formatLocalDateTime(endDate);
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     const response = await fetch(
@@ -167,7 +189,18 @@ export async function addToGoogleCalendar(
 export async function loadCalendarSettings(): Promise<CalendarSettings> {
   try {
     const stored = await AsyncStorage.getItem(STORAGE_KEYS.SETTINGS);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          appleCalendarEnabled: parsed.appleCalendarEnabled === true,
+          appleCalendarId: typeof parsed.appleCalendarId === 'string' ? parsed.appleCalendarId : undefined,
+          googleCalendarEnabled: parsed.googleCalendarEnabled === true,
+          googleAccessToken: typeof parsed.googleAccessToken === 'string' ? parsed.googleAccessToken : undefined,
+          googleRefreshToken: typeof parsed.googleRefreshToken === 'string' ? parsed.googleRefreshToken : undefined,
+        };
+      }
+    }
   } catch (e) {
     console.error('設定読み込みエラー:', e);
   }
