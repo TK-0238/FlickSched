@@ -48,6 +48,25 @@ describe('time utilities', () => {
     expect(hasConflict('09:30', 30, existing, '2099-01-01', 'a')).toBeNull();
   });
 
+  test('detects overnight conflicts on both affected dates', () => {
+    const overnight = [{
+      id: 'overnight',
+      templateId: 't',
+      title: 'overnight',
+      date: '2099-01-01',
+      startTime: '23:30',
+      endTime: '00:30',
+      duration: 60,
+      color: '#fff',
+      icon: 'x',
+      synced: false,
+    }];
+
+    expect(hasConflict('23:45', 15, overnight, '2099-01-01')?.id).toBe('overnight');
+    expect(hasConflict('00:00', 15, overnight, '2099-01-02')?.id).toBe('overnight');
+    expect(findNextAvailableSlot('2099-01-02', 30, overnight, '00:00')).toBe('00:30');
+  });
+
   test('finds the next free slot from a preferred time', () => {
     const existing = [{
       id: 'a',
