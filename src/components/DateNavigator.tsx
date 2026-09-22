@@ -5,6 +5,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants';
 import { formatDateDisplay, getTodayString, getTomorrowString } from '../utils/time';
 
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function formatLocalDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 interface Props {
   selectedDate: string;
   onDateChange: (date: string) => void;
@@ -16,15 +28,15 @@ export function DateNavigator({ selectedDate, onDateChange, onOpenCalendar }: Pr
   const tomorrow = getTomorrowString();
 
   const goBack = () => {
-    const d = new Date(selectedDate);
+    const d = parseLocalDate(selectedDate);
     d.setDate(d.getDate() - 1);
-    onDateChange(d.toISOString().split('T')[0]);
+    onDateChange(formatLocalDate(d));
   };
 
   const goForward = () => {
-    const d = new Date(selectedDate);
+    const d = parseLocalDate(selectedDate);
     d.setDate(d.getDate() + 1);
-    onDateChange(d.toISOString().split('T')[0]);
+    onDateChange(formatLocalDate(d));
   };
 
   const handleDatePress = () => {
