@@ -91,4 +91,46 @@ describe('time utilities', () => {
     expect(slots[0]).toEqual({ hour: 0, minute: 0, label: '00:00' });
     expect(slots[23]).toEqual({ hour: 23, minute: 0, label: '23:00' });
   });
+
+  test('handles midnight and end-of-day minute boundaries', () => {
+    expect(minutesToTime(0)).toBe('00:00');
+    expect(minutesToTime(1439)).toBe('23:59');
+    expect(calcEndTime('23:59', 1)).toBe('00:00');
+  });
+
+  test('detects overnight conflicts across a year boundary', () => {
+    const overnight = [{
+      id: 'year-boundary',
+      templateId: 't',
+      title: 'overnight',
+      date: '2099-12-31',
+      startTime: '23:30',
+      endTime: '00:30',
+      duration: 60,
+      color: '#fff',
+      icon: 'x',
+      synced: false,
+    }];
+
+    expect(hasConflict('00:00', 30, overnight, '2100-01-01')?.id).toBe('year-boundary');
+    expect(hasConflict('00:30', 30, overnight, '2100-01-01')).toBeNull();
+  });
+
+  test('searches earlier in the day when no later preferred slot is free', () => {
+    const blocked = [{
+      id: 'blocked',
+      templateId: 't',
+      title: 'blocked',
+      date: '2099-01-01',
+      startTime: '09:00',
+      endTime: '00:00',
+      duration: 15 * 60,
+      color: '#fff',
+      icon: 'x',
+      synced: false,
+    }];
+
+    expect(findNextAvailableSlot('2099-01-01', 60, blocked, '09:00')).toBe('00:00');
+  });
+
 });
