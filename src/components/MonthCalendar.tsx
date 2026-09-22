@@ -18,6 +18,10 @@ const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const getDaysInMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
 const addMonths = (d: Date, n: number) => { const r = new Date(d); r.setMonth(r.getMonth() + n); return r; };
 const isSameMonth = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+const parseLocalDate = (dateStr: string) => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CALENDAR_PADDING = 12;
@@ -66,7 +70,7 @@ export function MonthCalendar({
   // ── ビューモード: 'calendar'=日付グリッド, 'yearPicker'=年間月グリッド ──
   const [viewMode, setViewMode] = useState<'calendar' | 'yearPicker'>('calendar');
   const [viewingMonth, setViewingMonth] = useState<Date>(() =>
-    startOfMonth(new Date(selectedDate))
+    startOfMonth(parseLocalDate(selectedDate))
   );
   const [pickerYear, setPickerYear] = useState(now.getFullYear());
   const monthScrollRef = useRef<ScrollView>(null);
@@ -75,7 +79,7 @@ export function MonthCalendar({
   // モーダル表示時に選択中日付の月へジャンプ
   useEffect(() => {
     if (visible) {
-      const target = startOfMonth(new Date(selectedDate));
+      const target = startOfMonth(parseLocalDate(selectedDate));
       setViewingMonth(target);
       setViewMode('calendar');
       const timer = setTimeout(() => scrollToMonthTab(target), 150);
@@ -104,7 +108,7 @@ export function MonthCalendar({
       // 日付ごとのタスク数
       countMap.set(t.date, (countMap.get(t.date) || 0) + 1);
       // 月キー
-      const d = new Date(t.date);
+      const d = parseLocalDate(t.date);
       const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
       eventKeys.add(monthKey);
       monthCounts.set(monthKey, (monthCounts.get(monthKey) || 0) + 1);
